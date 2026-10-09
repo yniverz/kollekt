@@ -34,7 +34,7 @@
   {{range $g := .Groups}}
     {{if $g.Label}}<tr class="grp"><td colspan="{{add (len $.Cols) 1}}">{{$g.Label}} <span class="muted">· {{len $g.Rows}}</span></td></tr>{{end}}
     {{range $row := $g.Rows}}
-    <tr class="row {{if $row.Muted}}done{{end}}" {{if $row.Edit}}data-href="{{$.Base}}/{{$row.R.ID}}?next={{urlq $.ListURL}}"{{end}}>
+    <tr class="row {{if $row.Muted}}done{{end}}" {{if $row.Edit}}data-href="{{$.Base}}/{{$row.R.ID}}?next={{$.ListURL}}"{{end}}>
       {{range $c := $row.Cells}}{{template "cell" dict "C" $c "Row" $row "Base" $.Base "CanEdit" $.CanEdit "Next" $.ListURL}}{{end}}
       <td class="nowrap" style="text-align:right">{{range $a := $row.Acts}}
         <form method="post" action="{{$.Base}}/{{$row.R.ID}}/do/{{$a.Key}}" style="display:inline"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><input type="hidden" name="next" value="{{$.ListURL}}"><button class="btn sm">{{$a.Label}}</button></form>{{end}}</td>

@@ -694,6 +694,11 @@ func safeLocal(s string) bool {
 // back redirects to the "next" form value, or to def, but never to anything that is not a local path.
 func (c *C) back(def string) {
 	to := c.R.FormValue("next")
+	if !strings.HasPrefix(to, "/") && strings.HasPrefix(to, "%2") { // tolerate a once more encoded path
+		if dec, err := url.QueryUnescape(to); err == nil {
+			to = dec
+		}
+	}
 	if !safeLocal(to) {
 		to = def
 	}

@@ -25,7 +25,7 @@
     {{$stand := "§"}}
     {{range .B.Prods}}
       {{if ne .Stand $stand}}{{$stand = .Stand}}<tr class="grp"><td colspan="9">{{.Stand}}</td></tr>{{end}}
-      <tr class="row" {{if $.CanEdit}}data-href="/e/{{$.Event.ID}}/m/bar_products/{{.R.ID}}?next={{urlq $next}}"{{end}}>
+      <tr class="row" {{if $.CanEdit}}data-href="/e/{{$.Event.ID}}/m/bar_products/{{.R.ID}}?next={{$next}}"{{end}}>
         <td class="title"><a {{if $.CanEdit}}data-modal href="/e/{{$.Event.ID}}/m/bar_products/{{.R.ID}}?next={{$next}}"{{else}}href="#"{{end}}>{{.R.S "name"}}</a>{{if .Warn}} <span class="badge b-yellow">{{.Warn}}</span>{{end}}</td>
         <td>{{.R.S "category"}}</td>
         <td class="num">{{eur (.R.N "price")}}</td>
@@ -50,7 +50,7 @@
     <thead><tr><th>Artikel</th><th>Kategorie</th><th>Gebinde</th><th class="num">Preis</th><th class="num">Kosten/Einheit</th><th class="num">Pfand</th><th class="num">Vorhanden</th><th>Verwendet</th><th></th></tr></thead>
     <tbody>
     {{range .B.Items}}
-      <tr class="row" {{if $.CanEdit}}data-href="/e/{{$.Event.ID}}/m/bar_items/{{.R.ID}}?next={{urlq $next}}"{{end}}>
+      <tr class="row" {{if $.CanEdit}}data-href="/e/{{$.Event.ID}}/m/bar_items/{{.R.ID}}?next={{$next}}"{{end}}>
         <td class="title"><a {{if $.CanEdit}}data-modal href="/e/{{$.Event.ID}}/m/bar_items/{{.R.ID}}?next={{$next}}"{{else}}href="#"{{end}}>{{.R.S "name"}}</a></td>
         <td>{{.R.S "category"}}</td><td>{{.R.S "pack"}}</td>
         <td class="num">{{eur (.R.N "price")}}</td>

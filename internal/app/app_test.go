@@ -8,6 +8,7 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -551,6 +552,22 @@ func TestCSPIncludesSatelliteHostsOnlyWhenMapsAreOn(t *testing.T) {
 	mapCfg.Enabled = false
 	if strings.Contains(contentSecurityPolicy(), "sat.example.org") {
 		t.Fatal("maps off must not whitelist the satellite host")
+	}
+}
+
+// html/template treats data-href like href and percent-encodes it itself; pre-encoding with urlq
+// double-encodes the return path, which then lands on the start page after saving.
+func TestTemplatesDoNotPreEncodeURLAttributes(t *testing.T) {
+	entries, err := webFS.ReadDir("web/templates")
+	if err != nil {
+		t.Fatal(err)
+	}
+	re := regexp.MustCompile(`(?:data-)?href="[^"]*\{\{urlq`)
+	for _, e := range entries {
+		b, _ := webFS.ReadFile("web/templates/" + e.Name())
+		if re.Match(b) {
+			t.Errorf("%s pre-encodes an href with urlq", e.Name())
+		}
 	}
 }
 

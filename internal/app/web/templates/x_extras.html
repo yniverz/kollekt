@@ -130,7 +130,7 @@
   <tbody>
   {{range $p.Rows}}
   <tr class="row" {{if $p.CanEdit}}data-href="{{$p.Base}}/{{.R.ID}}?next={{$p.Next}}"{{end}}>
-    <td class="title" style="padding-left:{{add .Pad 12}}px">{{if $p.CanEdit}}<a data-modal href="{{$p.Base}}/{{.R.ID}}?next={{urlq $p.Next}}">{{.R.S "name"}}</a>{{else}}{{.R.S "name"}}{{end}}{{if .Site}} <span class="muted small">· {{icon "pin"}} {{.Site}}</span>{{end}}</td>
+    <td class="title" style="padding-left:{{add .Pad 12}}px">{{if $p.CanEdit}}<a data-modal href="{{$p.Base}}/{{.R.ID}}?next={{$p.Next}}">{{.R.S "name"}}</a>{{else}}{{.R.S "name"}}{{end}}{{if .Site}} <span class="muted small">· {{icon "pin"}} {{.Site}}</span>{{end}}</td>
     <td>{{if eq .Kind "source"}}{{badge .KindLabel "orange"}}{{else if eq .Kind "dist"}}{{badge .KindLabel "blue"}}{{else}}<span class="muted">{{.KindLabel}}</span>{{end}}</td>
     <td class="num">{{if eq .Kind "load"}}{{if .R.S "watts"}}{{num (.R.N "watts")}} W{{if gt (.R.N "qty") 1.0}} × {{num (.R.N "qty")}}{{end}}{{else}}–{{end}}{{else if .Cap}}{{num (div1000 .Cap)}} kW{{else}}–{{end}}</td>
     <td class="num">{{if .Load}}{{num (div1000 .Load)}} kW{{if .Chained}}<div class="muted small">inkl. Angehängtes</div>{{end}}{{else}}–{{end}}</td>
