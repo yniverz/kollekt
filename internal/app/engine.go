@@ -859,10 +859,13 @@ func (c *C) collect(m *Module, rec *Rec) (map[string]string, map[string]string) 
 		}
 	}
 	if st, en := vals["start"], vals["end"]; st != "" && en != "" {
-		a, ok1 := parseDT(st)
-		b, ok2 := parseDT(en)
-		if ok1 && ok2 && b.Before(a) {
-			errs["end"] = "Das Ende liegt vor dem Beginn."
+		if rolled, changed := rollEnd(st, en); changed {
+			vals["end"] = rolled // 20:00 to 01:00 means 01:00 the next day
+			c.rolled = true
+		} else if a, ok1 := parseDT(st); ok1 {
+			if b, ok2 := parseDT(en); ok2 && b.Before(a) {
+				errs["end"] = "Das Ende liegt vor dem Beginn."
+			}
 		}
 	}
 	return vals, errs
@@ -903,7 +906,7 @@ func (c *C) handleSave(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		c.audit(m, rec, "geändert")
-		c.setFlash("Gespeichert.")
+		c.setFlash("Gespeichert." + c.rolledNote())
 		c.back(next)
 		return
 	}
@@ -937,7 +940,7 @@ func (c *C) handleSave(w http.ResponseWriter, r *http.Request) {
 	if count > 1 {
 		c.setFlash(fmt.Sprintf("%d Einträge angelegt.", count))
 	} else {
-		c.setFlash("Angelegt.")
+		c.setFlash("Angelegt." + c.rolledNote())
 	}
 	c.back(next)
 }
@@ -1057,4 +1060,11 @@ func maxLen(t FieldType) int {
 		return 20000
 	}
 	return 0
+}
+
+func (c *C) rolledNote() string {
+	if c.rolled {
+		return " Das Ende lag vor dem Beginn und wurde auf den Folgetag gelegt."
+	}
+	return ""
 }

@@ -99,6 +99,12 @@ Go 1.26, keine CGO-Abhängigkeit (SQLite über `modernc.org/sqlite`), Oberfläch
 
 Unter *Event-Einstellungen → Richtwerte* stellst du pro Event ein: ab wann Wetterwarnungen erscheinen (Regenwahrscheinlichkeit und -menge, Böen, Hitze, Kälte), Personen pro m² und Rettungswegbreite für den Dichte-Check (pro Plan überschreibbar), cos φ, „knapp“-Schwelle und Reserve beim Strom. Es sind Orientierungswerte ohne Rechtswirkung. Fehlerhafte Eingaben fallen auf die Startwerte zurück.
 
+## Mehrtägige Events und Zeiten über Mitternacht
+
+* **Über Mitternacht:** Trägst du bei Beginn/Ende oder bei Line-up, Schichten und Ablaufplan ein Ende ein, das am selben Datum vor dem Beginn liegt (20:00 bis 01:00), legt Kollekt es automatisch auf den Folgetag und weist darauf hin. Liegt das Ende an einem früheren Datum, gibt es einen Fehler.
+* **Mehrere Tage mit eigenen Zeiten:** In den Event-Einstellungen kannst du unter „Veranstaltungstage“ jeden Tag einzeln eintragen (z. B. Fr 20 bis 1 Uhr, Sa 14 bis 3 Uhr). Beginn und Ende des Events werden daraus berechnet. Die Tage erscheinen in der Übersicht, im Zeitplan, im Kalender-Abo (ein Termin pro Tag) und im Anwohner-Brief.
+* **Zuordnung zum Tag:** Zeitleiste und Ablaufplan zählen alles vor 6 Uhr morgens zum Vortag, damit ein Set um 02:00 beim richtigen Abend steht. Das Wetter wird für diese Veranstaltungstage geholt.
+
 ## Fristen und Kalender
 
 * **Relative Fristen:** Bei Aufgaben, Genehmigungen und Budget-Posten kannst du „Frist relativ zum Event“ setzen (z. B. 42 Tage vorher, negativ = nach dem Event). Das Datum wird aus dem Eventtermin berechnet und wandert mit, wenn du den Termin änderst. Die mitgelieferten Vorlagen bringen Vorschläge für Vorlaufzeiten mit. Das sind grobe Richtwerte, keine amtlichen Fristen.

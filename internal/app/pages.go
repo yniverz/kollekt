@@ -199,21 +199,23 @@ type LetterSettings struct {
 
 func (c *C) defaultLetter(s LetterSettings) string {
 	e := c.Event
-	when := "an einem noch offenen Termin"
-	if e.Start != "" {
-		when = fmtDate(e.Start)
-		if t := fmtHM(e.Start); t != "" {
-			when += " ab " + t + " Uhr"
+	when, list := "An einem noch offenen Termin", ""
+	if sp := e.daySpans(); len(sp) > 0 {
+		var parts []string
+		for _, s := range sp {
+			if s.End.Equal(s.Start) {
+				parts = append(parts, fmtDate(s.Start.Format("2006-01-02"))+" ab "+s.Start.Format("15:04")+" Uhr")
+			} else {
+				parts = append(parts, dayText(s))
+			}
 		}
-		if e.End != "" {
-			if st, ok := parseDT(e.Start); ok {
-				if en, ok2 := parseDT(e.End); ok2 && fmtHM(e.End) != "" {
-					if en.YearDay() == st.YearDay() && en.Year() == st.Year() {
-						when += " bis ca. " + fmtHM(e.End) + " Uhr"
-					} else {
-						when += " bis " + fmtDT(e.End) + " Uhr"
-					}
-				}
+		if len(e.configuredDays()) > 1 {
+			when = "An mehreren Tagen"
+			list = "\n• " + strings.Join(parts, "\n• ")
+		} else {
+			when = "Am " + parts[0]
+			if strings.HasPrefix(parts[0], "von ") {
+				when = "Von " + strings.TrimPrefix(parts[0], "von ")
 			}
 		}
 	}
@@ -225,7 +227,7 @@ func (c *C) defaultLetter(s LetterSettings) string {
 	}
 	var b strings.Builder
 	b.WriteString("Sehr geehrte Nachbarinnen und Nachbarn,\n\n")
-	b.WriteString(fmt.Sprintf("am %s findet%s die Veranstaltung „%s“ statt. Der Auf- und Abbau erfolgt davor beziehungsweise danach.\n\n", when, place, e.Name))
+	b.WriteString(fmt.Sprintf("%s findet%s die Veranstaltung „%s“ statt.%s\n\nDer Auf- und Abbau erfolgt davor beziehungsweise danach.\n\n", when, place, e.Name, list))
 	b.WriteString("Es wird Musik gespielt. Die Lautstärke wird laufend kontrolliert, und die Lautsprecher werden so ausgerichtet, dass die Belastung für die Nachbarschaft so gering wie möglich bleibt.")
 	if s.Until != "" {
 		b.WriteString(fmt.Sprintf(" Die Musik endet spätestens um %s Uhr.", s.Until))

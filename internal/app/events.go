@@ -49,6 +49,15 @@ func (a *App) eventCreate(c *C) {
 	if _, ok := parseDT(r.FormValue("end")); ok {
 		e.End = r.FormValue("end")
 	}
+	if e.Start != "" && e.End != "" {
+		if rolled, changed := rollEnd(e.Start, e.End); changed {
+			e.End = rolled
+		} else if en, _ := parseDT(e.End); en.Before(mustDT(e.Start)) {
+			c.W.WriteHeader(422)
+			c.Page("event_new.html", map[string]any{"Title": "Neues Event", "Templates": a.templates(), "Locations": a.locationOptions(0), "Statuses": eventStatuses, "Form": form, "Error": "Das Ende liegt vor dem Beginn."})
+			return
+		}
+	}
 	if lid := int64(parseNum(r.FormValue("location"))); lid != 0 {
 		if l := a.rec(lid); l != nil && l.Module == "locations" {
 			e.LocationID = lid
@@ -116,7 +125,7 @@ func (c *C) renderSettings(form map[string]string, errMsg string) {
 	}
 	c.Page("settings.html", map[string]any{
 		"Title": "Event-Einstellungen", "Nav": c.eventNav(""), "Form": form, "Statuses": eventStatuses, "Mods": mods,
-		"Locations": c.A.locationOptions(e.LocationID), "Error": errMsg, "Tax": c.tax(), "Lim": c.limits(),
+		"Locations": c.A.locationOptions(e.LocationID), "Error": errMsg, "Tax": c.tax(), "Lim": c.limits(), "Days": e.configuredDays(),
 	})
 }
 
@@ -138,12 +147,32 @@ func (a *App) settingsSave(c *C) {
 			e.Status = o.V
 		}
 	}
-	e.Start, e.End = "", ""
-	if _, ok := parseDT(form["start"]); ok {
-		e.Start = form["start"]
+	days, derr := parseDayRows(r)
+	if derr != "" {
+		c.renderSettings(form, derr)
+		return
 	}
-	if _, ok := parseDT(form["end"]); ok {
-		e.End = form["end"]
+	note := ""
+	if len(days) > 0 {
+		e.applyDays(days)
+	} else {
+		delete(e.Settings, "days")
+		e.Start, e.End = "", ""
+		if _, ok := parseDT(form["start"]); ok {
+			e.Start = form["start"]
+		}
+		if _, ok := parseDT(form["end"]); ok {
+			e.End = form["end"]
+		}
+		if e.Start != "" && e.End != "" {
+			if rolled, changed := rollEnd(e.Start, e.End); changed {
+				e.End = rolled
+				note = " Das Ende lag vor dem Beginn und wurde auf den Folgetag gelegt."
+			} else if en, _ := parseDT(e.End); en.Before(mustDT(e.Start)) {
+				c.renderSettings(form, "Das Ende liegt vor dem Beginn.")
+				return
+			}
+		}
 	}
 	e.Description = form["description"]
 	e.LocationID = 0
@@ -173,7 +202,7 @@ func (a *App) settingsSave(c *C) {
 	}
 	a.applyRelative(e)
 	a.logAudit(c.User.ID, e.ID, "event", e.ID, "Einstellungen geändert", e.Name)
-	c.setFlash("Einstellungen gespeichert.")
+	c.setFlash("Einstellungen gespeichert." + note)
 	c.Redirect("/e/" + itoa(e.ID) + "/")
 }
 

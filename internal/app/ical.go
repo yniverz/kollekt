@@ -5,6 +5,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -151,9 +152,13 @@ func (c *C) icsFeed() string {
 	o.line("METHOD:PUBLISH")
 	o.line("X-WR-CALNAME:" + icsEscape("Kollekt: "+c.Event.Name))
 	o.line("REFRESH-INTERVAL;VALUE=DURATION:PT1H")
-	if st, ok := parseDT(c.Event.Start); ok {
-		end, _ := parseDT(c.Event.End)
-		o.event("event-"+itoa(c.Event.ID), c.Event.Name, "", st, len(c.Event.Start) <= 10, end, false)
+	spans := c.Event.daySpans()
+	for i, sp := range spans {
+		name := c.Event.Name
+		if len(c.Event.configuredDays()) > 1 {
+			name = fmt.Sprintf("%s (Tag %d/%d)", c.Event.Name, i+1, len(spans))
+		}
+		o.event(fmt.Sprintf("event-%d-%d", c.Event.ID, i), name, "", sp.Start, len(c.Event.Start) <= 10, sp.End, false)
 	}
 	entries, _ := c.timeEntries()
 	for _, en := range entries {

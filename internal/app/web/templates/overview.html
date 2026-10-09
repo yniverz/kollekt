@@ -9,6 +9,7 @@
       {{if $v.Loc}} · {{$v.Loc}}{{if $v.LocCap}} ({{num $v.LocCap}} Plätze){{end}}{{end}}
       {{if $v.HasDate}}{{if gt $v.Days 0}} · noch {{$v.Days}} Tage{{else if eq $v.Days 0}} · heute{{end}}{{end}}
     </p>
+    {{if $v.DaysText}}<p class="sub"><b>Tage:</b> {{$v.DaysText}}</p>{{end}}
     {{if .Event.Description}}<p class="sub">{{nl2br .Event.Description}}</p>{{end}}
   </div>
   <div class="actions">{{if .CanSettings}}<a class="btn" href="/e/{{.Event.ID}}/settings">{{icon "sliders"}} Einstellungen</a>{{end}}</div>

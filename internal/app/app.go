@@ -307,6 +307,7 @@ type C struct {
 	Mem            *Member
 	cache          map[string][]*Rec
 	geoDone, geoOK bool
+	rolled         bool
 	geoLat, geoLng float64
 	refs           map[string]map[int64]string
 }

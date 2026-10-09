@@ -10,6 +10,14 @@
     <div class="field"><label class="lbl" for="loc">Location</label><select id="loc" name="location"><option value="">Noch offen</option>{{range .Locations}}<option value="{{.ID}}" {{if .Sel}}selected{{end}}>{{.Title}}</option>{{end}}</select></div>
     <div class="field"><label class="lbl" for="start">Beginn</label><input id="start" type="datetime-local" name="start" value="{{.Form.start}}"></div>
     <div class="field"><label class="lbl" for="end">Ende</label><input id="end" type="datetime-local" name="end" value="{{.Form.end}}"></div>
+    <div class="field wide"><span class="lbl">Veranstaltungstage mit eigenen Zeiten (optional)</span>
+      <div id="days">
+      {{range .Days}}<div class="rowline day"><input type="date" name="day_date" value="{{.Date}}" aria-label="Datum"><input type="time" name="day_from" value="{{.From}}" aria-label="Beginn"><input type="time" name="day_to" value="{{.To}}" aria-label="Ende"><button type="button" class="btn ghost sm" data-rm-row title="Entfernen">×</button></div>{{end}}
+      </div>
+      <template id="tpl-day"><div class="rowline day"><input type="date" name="day_date" aria-label="Datum"><input type="time" name="day_from" value="20:00" aria-label="Beginn"><input type="time" name="day_to" value="01:00" aria-label="Ende"><button type="button" class="btn ghost sm" data-rm-row title="Entfernen">×</button></div></template>
+      <button type="button" class="btn sm" data-add-row="tpl-day" data-into="days">{{icon "plus"}} Tag hinzufügen</button>
+      <div class="help">Läuft das Event mehrere Tage mit unterschiedlichen Zeiten (z. B. Fr 20 bis 1 Uhr, Sa 14 bis 3 Uhr), trage jeden Tag einzeln ein. Beginn und Ende des Events werden dann daraus berechnet. Endet ein Tag nach Mitternacht, gib einfach die frühere Uhrzeit ein (z. B. 01:00), sie gilt für den Folgetag. Ohne Einträge gelten Beginn und Ende oben.</div>
+    </div>
     <div class="field wide"><label class="lbl" for="desc">Beschreibung</label><textarea id="desc" name="description">{{.Form.description}}</textarea></div>
   </div>
   <h2 style="margin-top:8px">Netto / Brutto</h2>

@@ -250,7 +250,16 @@ func (c *C) handleWeather(w http.ResponseWriter, r *http.Request) {
 		jsonOut(w, 200, &WeatherOut{Mode: "none", Note: "Für die Wetterdaten fehlt der Eventtermin."})
 		return
 	}
-	out := *eventWeather(lat, lng, c.Event.Start, c.Event.End) // copy: the cached value stays untouched
+	// weather is daily: use the party days (a set that ends at 01:00 still belongs to the evening before)
+	from, to := c.Event.Start, c.Event.End
+	if sp := c.Event.daySpans(); len(sp) > 0 {
+		from = eventDay(sp[0].Start).Format("2006-01-02")
+		to = eventDay(sp[len(sp)-1].End).Format("2006-01-02")
+		if to < from {
+			to = from
+		}
+	}
+	out := *eventWeather(lat, lng, from, to) // copy: the cached value stays untouched
 	lim := c.limits()
 	out.Days = append([]WeatherDay(nil), out.Days...)
 	for i := range out.Days {

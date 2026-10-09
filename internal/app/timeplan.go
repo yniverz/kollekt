@@ -235,34 +235,47 @@ func (c *C) handleTimeplan(w http.ResponseWriter, r *http.Request) {
 		shown = append(shown, en)
 	}
 	groups := c.groupEntries(shown)
-	// event marker: insert the event itself into the right group
+	// event markers: one per event day, placed into the right week
 	evDay, hasEv := c.eventStartDay()
 	daysToEvent := 0
 	if hasEv {
 		daysToEvent = int(evDay.Sub(td).Hours() / 24)
 		if kind == "" && !mine {
-			marker := &TEntry{Raw: c.Event.Start, When: evDay, AllDay: true, Kind: "event", Label: "Event", Color: "red", Title: c.Event.Name, Days: daysToEvent, HasT: true, ID: 0, CanEdit: false}
-			placed := false
-			for _, g := range groups {
-				if g.Late {
+			spans := c.Event.daySpans()
+			multi := len(c.Event.configuredDays()) > 1
+			for i, sp := range spans {
+				day := time.Date(sp.Start.Year(), sp.Start.Month(), sp.Start.Day(), 0, 0, 0, 0, time.UTC)
+				title := c.Event.Name
+				if multi {
+					title = fmt.Sprintf("%s · Tag %d von %d (%s–%s Uhr)", c.Event.Name, i+1, len(spans), sp.Start.Format("15:04"), sp.End.Format("15:04"))
+				}
+				marker := &TEntry{Raw: day.Format("2006-01-02"), When: day, AllDay: true, Kind: "event", Label: "Event", Color: "red", Title: title,
+					Days: int(day.Sub(td).Hours() / 24), HasT: true, TMinus: int(evDay.Sub(day).Hours() / 24)}
+				if marker.Days < 0 {
 					continue
 				}
-				if weekStart(g.Entries[0].When).Equal(weekStart(evDay)) {
-					g.Entries = append(g.Entries, marker)
-					sort.SliceStable(g.Entries, func(i, j int) bool { return g.Entries[i].When.Before(g.Entries[j].When) })
-					placed = true
+				placed := false
+				for _, g := range groups {
+					if g.Late || len(g.Entries) == 0 {
+						continue
+					}
+					if weekStart(g.Entries[0].When).Equal(weekStart(day)) {
+						g.Entries = append(g.Entries, marker)
+						sort.SliceStable(g.Entries, func(a, b int) bool { return g.Entries[a].When.Before(g.Entries[b].When) })
+						placed = true
+						break
+					}
+				}
+				if !placed {
+					groups = append(groups, &TGroup{Label: weekLabel(weekStart(day)), Entries: []*TEntry{marker}, Marker: true})
 				}
 			}
-			if !placed && daysToEvent >= 0 {
-				g := &TGroup{Label: weekLabel(weekStart(evDay)), Entries: []*TEntry{marker}, Marker: true}
-				groups = append(groups, g)
-				sort.SliceStable(groups, func(i, j int) bool {
-					if groups[i].Late != groups[j].Late {
-						return groups[i].Late
-					}
-					return groups[i].Entries[0].When.Before(groups[j].Entries[0].When)
-				})
-			}
+			sort.SliceStable(groups, func(i, j int) bool {
+				if groups[i].Late != groups[j].Late {
+					return groups[i].Late
+				}
+				return groups[i].Entries[0].When.Before(groups[j].Entries[0].When)
+			})
 		}
 	}
 	data := map[string]any{

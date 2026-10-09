@@ -345,3 +345,5 @@ details.d > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 
 .kmap-hint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 1000; pointer-events: none; opacity: 0; transition: opacity .2s; background: rgba(29, 27, 24, .82); color: #fff; font-size: 14px; padding: 8px 14px; border-radius: 3px; white-space: nowrap; }
 .kmap-hint.on { opacity: 1; }
+
+.rowline.day { grid-template-columns: 1fr 110px 110px 30px; }

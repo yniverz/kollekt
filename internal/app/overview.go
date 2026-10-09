@@ -37,6 +37,7 @@ type OverviewView struct {
 	Areas    []*AreaCard
 	Team     []*Member
 	Pin      *MapView
+	DaysText string
 }
 
 func (c *C) modLink(key string) string {
@@ -351,6 +352,7 @@ func (c *C) handleOverview(w http.ResponseWriter, r *http.Request) {
 		v.Areas = ar.Cards
 	}
 	v.Pin = c.eventPin()
+	v.DaysText = e.daysSummary()
 	v.Audit = c.A.recentAudit(e.ID, 10)
 	v.Team = c.A.members(e.ID)
 	c.Page("overview.html", map[string]any{"Title": e.Name, "Nav": c.eventNav("overview"), "V": v, "EStatus": e.Status, "Weather": !weatherOff && e.Start != ""})

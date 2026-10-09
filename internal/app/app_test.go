@@ -571,6 +571,95 @@ func TestSameOriginBehindProxies(t *testing.T) {
 	}
 }
 
+func TestRollEndTreatsEarlierTimeAsNextDay(t *testing.T) {
+	cases := []struct {
+		start, end, want string
+		changed          bool
+	}{
+		{"2026-12-11T20:00", "2026-12-11T01:00", "2026-12-12T01:00", true}, // 20 to 1 o'clock
+		{"2026-12-11T20:00", "2026-12-12T01:00", "2026-12-12T01:00", false},
+		{"2026-12-11T20:00", "2026-12-11T23:00", "2026-12-11T23:00", false},
+		{"2026-12-11T20:00", "2026-12-10T23:00", "2026-12-10T23:00", false}, // day before stays an error
+		{"2026-12-11T20:00", "2026-12-11", "2026-12-11", false},             // date only
+	}
+	for _, c := range cases {
+		got, changed := rollEnd(c.start, c.end)
+		if got != c.want || changed != c.changed {
+			t.Errorf("rollEnd(%s, %s) = %s %v, want %s %v", c.start, c.end, got, changed, c.want, c.changed)
+		}
+	}
+}
+
+func TestEventDaysWithDifferentTimes(t *testing.T) {
+	_, e, _ := testApp(t)
+	days := []EventDay{{"2026-12-12", "14:00", "03:00"}, {"2026-12-11", "20:00", "01:00"}}
+	e.applyDays([]EventDay{days[1], days[0]})
+	if e.Start != "2026-12-11T20:00" || e.End != "2026-12-13T03:00" {
+		t.Fatalf("start/end derived wrongly: %s – %s", e.Start, e.End)
+	}
+	sp := e.daySpans()
+	if len(sp) != 2 || sp[0].Start.Day() != 11 || sp[0].End.Day() != 12 || sp[1].End.Hour() != 3 {
+		t.Fatalf("spans = %+v", sp)
+	}
+	if txt := dayText(sp[0]); !strings.Contains(txt, "von 20:00 bis 01:00 Uhr (Folgetag)") {
+		t.Fatalf("dayText = %q", txt)
+	}
+	if e.daysSummary() == "" || !strings.Contains(e.daysSummary(), "20:00–01:00") {
+		t.Fatalf("summary = %q", e.daysSummary())
+	}
+	// without day rows the plain span is used
+	e.applyDays(nil)
+	e.Start, e.End = "2026-12-11T20:00", "2026-12-14T02:00"
+	if sp := e.daySpans(); len(sp) != 1 || sp[0].End.Day() != 14 {
+		t.Fatalf("fallback span = %+v", sp)
+	}
+	if !strings.Contains(dayText(e.daySpans()[0]), "bis Mo, 14.12.2026") {
+		t.Fatalf("multi-day text = %q", dayText(e.daySpans()[0]))
+	}
+}
+
+func TestInvalidDayRowsAreRejected(t *testing.T) {
+	mk := func(date, from, to string) *http.Request {
+		r := httptest.NewRequest("POST", "/", strings.NewReader("day_date="+date+"&day_from="+from+"&day_to="+to))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		return r
+	}
+	if d, msg := parseDayRows(mk("2026-12-11", "20:00", "01:00")); msg != "" || len(d) != 1 {
+		t.Fatalf("valid row rejected: %v %s", d, msg)
+	}
+	for _, bad := range [][3]string{{"2026-13-40", "20:00", "01:00"}, {"2026-12-11", "25:00", "01:00"}, {"2026-12-11", "20:00", "abc"}, {"", "20:00", "01:00"}} {
+		if _, msg := parseDayRows(mk(bad[0], bad[1], bad[2])); msg == "" {
+			t.Errorf("%v must be rejected", bad)
+		}
+	}
+}
+
+func TestLetterListsEveryDay(t *testing.T) {
+	_, e, c := testApp(t)
+	e.Name = "Festival"
+	e.applyDays([]EventDay{{"2026-12-11", "20:00", "01:00"}, {"2026-12-12", "14:00", "03:00"}})
+	txt := c.defaultLetter(LetterSettings{})
+	for _, want := range []string{"An mehreren Tagen", "11.12.2026 von 20:00 bis 01:00 Uhr (Folgetag)", "12.12.2026 von 14:00 bis 03:00 Uhr (Folgetag)"} {
+		if !strings.Contains(txt, want) {
+			t.Errorf("letter misses %q:\n%s", want, txt)
+		}
+	}
+}
+
+func TestICSHasOneEventPerDay(t *testing.T) {
+	_, e, c := testApp(t)
+	e.Name = "Festival"
+	e.Modules = []string{"timeplan"}
+	e.applyDays([]EventDay{{"2026-12-11", "20:00", "01:00"}, {"2026-12-12", "14:00", "03:00"}})
+	feed := c.icsFeed()
+	if n := strings.Count(feed, "SUMMARY:Festival (Tag"); n != 2 {
+		t.Fatalf("expected 2 day events, got %d:\n%s", n, feed)
+	}
+	if !strings.Contains(feed, "DTSTART:20261211T200000") || !strings.Contains(feed, "DTEND:20261212T010000") || !strings.Contains(feed, "DTSTART:20261212T140000") {
+		t.Fatalf("times wrong:\n%s", feed)
+	}
+}
+
 func TestNumberParsing(t *testing.T) {
 	cases := map[string]float64{"1,5": 1.5, "1.234,56": 1234.56, "3.5": 3.5, "": 0, " 12 ": 12}
 	for in, want := range cases {
