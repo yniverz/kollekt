@@ -293,17 +293,21 @@ func (c *C) calBase() string {
 	return scheme + "://" + host
 }
 
-func (a *App) migrateTimeplan() {
-	for _, e := range a.allEvents() {
-		var done bool
-		if e.getSetting("mig_timeplan", &done) && done {
-			continue
+// migrateModules switches newly introduced default modules on for events created before them.
+func (a *App) migrateModules() {
+	for _, mod := range []string{"timeplan", "sitemap"} {
+		for _, e := range a.allEvents() {
+			flag := "mig_" + mod
+			var done bool
+			if e.getSetting(flag, &done) && done {
+				continue
+			}
+			if !e.Has(mod) {
+				e.Modules = append(e.Modules, mod)
+			}
+			e.setting(flag, true)
+			_ = a.saveEvent(e)
 		}
-		if !e.Has("timeplan") {
-			e.Modules = append(e.Modules, "timeplan")
-		}
-		e.setting("mig_timeplan", true)
-		_ = a.saveEvent(e)
 	}
 }
 

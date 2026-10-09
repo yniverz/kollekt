@@ -51,6 +51,7 @@
     {{end}}
   </div>
   <div class="stack">
+    {{if $v.Pin}}<div class="panel"><h2>Ort</h2><div class="kmap" data-points="{{$v.Pin.JSON}}" data-height="{{$v.Pin.Height}}" style="margin-bottom:0"></div></div>{{end}}
     <div class="panel">
       <h2>Team</h2>
       {{if $v.Team}}<ul class="alist">{{range $v.Team}}{{if .User}}<li><span>{{.User.Name}}</span><span class="muted" style="margin-left:auto">{{if .Role}}{{.Role.Name}}{{end}}</span></li>{{end}}{{end}}</ul>{{else}}<p class="muted" style="margin:0">Noch niemand eingeladen.</p>{{end}}

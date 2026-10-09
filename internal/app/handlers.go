@@ -55,6 +55,16 @@ func (a *App) routes() {
 	mux.HandleFunc("POST /e/{eid}/ical", a.evt(a.handleCalRegenerate))
 	mux.HandleFunc("GET /cal/{token}", a.icsHandler)
 
+	mux.HandleFunc("GET /e/{eid}/lageplan", a.evt(func(c *C) { c.handleLageplan(c.W, c.R) }))
+	mux.HandleFunc("POST /e/{eid}/lageplan/new", a.evt(func(c *C) { c.handlePlanCreate(c.W, c.R) }))
+	mux.HandleFunc("POST /e/{eid}/lageplan/{pid}", a.evt(func(c *C) { c.handlePlanUpdate(c.W, c.R) }))
+	mux.HandleFunc("POST /e/{eid}/lageplan/{pid}/delete", a.evt(func(c *C) { c.handlePlanDelete(c.W, c.R) }))
+	mux.HandleFunc("GET /e/{eid}/lageplan/{pid}/data", a.evt(func(c *C) { c.handleSiteData(c.W, c.R) }))
+	mux.HandleFunc("GET /e/{eid}/lageplan/{pid}/image", a.evt(func(c *C) { c.handleSiteImage(c.W, c.R) }))
+	mux.HandleFunc("POST /e/{eid}/lageplan/{pid}/items", a.evt(func(c *C) { c.handleSiteItemSave(c.W, c.R) }))
+	mux.HandleFunc("POST /e/{eid}/lageplan/{pid}/view", a.evt(func(c *C) { c.handleSiteView(c.W, c.R) }))
+	mux.HandleFunc("POST /e/{eid}/lageplan/items/{iid}/delete", a.evt(func(c *C) { c.handleSiteItemDelete(c.W, c.R) }))
+
 	// custom pages
 	mux.HandleFunc("GET /e/{eid}/calc", a.evt(func(c *C) { c.handleCalc(c.W, c.R) }))
 	mux.HandleFunc("POST /e/{eid}/calc", a.evt(func(c *C) { c.handleCalcSave(c.W, c.R) }))

@@ -25,6 +25,7 @@ const (
 	TURL      FieldType = "url"
 	TColor    FieldType = "color"
 	TRecipe   FieldType = "recipe"
+	TGeo      FieldType = "geo" // "lat,lng"
 )
 
 type Opt struct {
@@ -50,6 +51,7 @@ type Field struct {
 	DatalistFn string   // dynamic suggestions: "field values of this module key"
 	Sum        bool
 	BlankLabel string
+	NoForm     bool // managed elsewhere, not shown in the generic form
 }
 
 func F(key, label string, t FieldType) Field { return Field{Key: key, Label: label, Type: t} }
@@ -60,6 +62,7 @@ func (f Field) Wide_() Field           { f.Wide = true; return f }
 func (f Field) Fin_() Field            { f.Fin = true; return f }
 func (f Field) Sum_() Field            { f.Sum = true; return f }
 func (f Field) Quick_() Field          { f.Quick = true; f.InList = true; return f }
+func (f Field) Hidden_() Field         { f.NoForm = true; return f }
 func (f Field) Blank(s string) Field   { f.BlankLabel = s; return f }
 func (f Field) Hint(s string) Field    { f.Help = s; return f }
 func (f Field) Unit(s string) Field    { f.Suffix = s; return f }
@@ -166,3 +169,16 @@ func numStr(f float64) string {
 }
 
 func round2(f float64) float64 { return math.Round(f*100) / 100 }
+
+// parseGeo parses "lat,lng" and validates the range.
+func parseGeo(s string) (lat, lng float64, ok bool) {
+	parts := strings.Split(strings.TrimSpace(s), ",")
+	if len(parts) != 2 || !validNum(parts[0]) || !validNum(parts[1]) || strings.TrimSpace(parts[0]) == "" || strings.TrimSpace(parts[1]) == "" {
+		return 0, 0, false
+	}
+	lat, lng = parseNum(strings.ReplaceAll(parts[0], " ", "")), parseNum(strings.ReplaceAll(parts[1], " ", ""))
+	if lat < -90 || lat > 90 || lng < -180 || lng > 180 {
+		return 0, 0, false
+	}
+	return lat, lng, true
+}

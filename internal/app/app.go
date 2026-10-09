@@ -28,6 +28,10 @@ type Config struct {
 	AdminUser     string
 	AdminPass     string
 	TrustProxy    bool
+	MapsOff       bool
+	TileURL       string
+	TileAttrib    string
+	GeocoderURL   string
 }
 
 func ConfigFromEnv() Config {
@@ -38,6 +42,10 @@ func ConfigFromEnv() Config {
 		AdminUser:     os.Getenv("KOLLEKT_ADMIN_USER"),
 		AdminPass:     os.Getenv("KOLLEKT_ADMIN_PASSWORD"),
 		TrustProxy:    env("KOLLEKT_TRUST_PROXY", "") == "1",
+		MapsOff:       strings.EqualFold(env("KOLLEKT_MAPS", ""), "off"),
+		TileURL:       env("KOLLEKT_TILE_URL", "https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+		TileAttrib:    env("KOLLEKT_TILE_ATTRIBUTION", "© OpenStreetMap-Mitwirkende"),
+		GeocoderURL:   env("KOLLEKT_GEOCODER_URL", "https://nominatim.openstreetmap.org/search"),
 	}
 }
 
@@ -61,6 +69,7 @@ func Run(cfg Config) error {
 		return err
 	}
 	trustProxy = cfg.TrustProxy
+	mapCfg = MapConfig{Enabled: !cfg.MapsOff, TileURL: cfg.TileURL, Attribution: cfg.TileAttrib, GeocoderURL: cfg.GeocoderURL}
 	db, err := openDB(cfg.DataDir)
 	if err != nil {
 		return err
@@ -264,13 +273,20 @@ func (c *C) Level(perm string) int {
 	if perm == "overview" {
 		return 1
 	}
-	if l, ok := c.Mem.Role.Perms[perm]; ok {
+	return rolePerm(c.Mem.Role.Perms, perm)
+}
+
+// rolePerm returns a role's level for a permission key. Roles saved before a module existed
+// get read access derived from a related permission.
+func rolePerm(p map[string]int, key string) int {
+	if l, ok := p[key]; ok {
 		return l
 	}
-	if perm == "timeplan" { // roles older than this module: read access if they can see tasks
-		if c.Mem.Role.Perms["tasks"] >= 1 {
-			return 1
-		}
+	switch key {
+	case "timeplan":
+		return min(p["tasks"], 1)
+	case "sitemap":
+		return min(p["areas"], 1)
 	}
 	return 0
 }
@@ -403,6 +419,7 @@ func (c *C) renderTpl(name string, data map[string]any) {
 		data = map[string]any{}
 	}
 	data["User"] = c.User
+	data["Maps"] = mapCfg
 	data["SourceURL"] = env("KOLLEKT_SOURCE_URL", "https://github.com/yniverz/kollekt")
 	if c.Sess != nil {
 		data["CSRF"] = c.Sess.CSRF
@@ -442,6 +459,7 @@ func (c *C) Page(name string, data map[string]any) {
 			}
 			data["Event"] = c.Event
 			data["User"] = c.User
+			data["Maps"] = mapCfg
 			var b bytes.Buffer
 			if err := t.ExecuteTemplate(&b, "partial", data); err != nil {
 				log.Printf("partial %s: %v", name, err)
@@ -494,7 +512,7 @@ func limitBody(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	max := int64(maxBody)
-	if strings.HasSuffix(r.URL.Path, "/files") {
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") && (strings.HasSuffix(r.URL.Path, "/files") || strings.Contains(r.URL.Path, "/lageplan")) {
 		max = maxUpload + 1<<20
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, max)
@@ -533,7 +551,7 @@ func (a *App) auth(h handler) http.HandlerFunc {
 				c.Error(413, "Die Datei ist zu groß (maximal 25 MB pro Datei).")
 				return
 			}
-			if !sameOrigin(r) || r.FormValue("_csrf") != c.Sess.CSRF {
+			if !sameOrigin(r) || (r.FormValue("_csrf") != c.Sess.CSRF && r.Header.Get("X-CSRF-Token") != c.Sess.CSRF) {
 				c.Error(403, "Die Sitzung ist abgelaufen oder die Anfrage ungültig. Bitte Seite neu laden.")
 				return
 			}
@@ -585,16 +603,54 @@ func (c *C) back(def string) {
 	c.Redirect(to)
 }
 
+// MapConfig controls the optional map features (tiles and address search come from external services).
+type MapConfig struct {
+	Enabled     bool
+	TileURL     string
+	Attribution string
+	GeocoderURL string
+}
+
+var mapCfg = MapConfig{}
+
+func originOf(raw string) string {
+	wild := strings.Contains(raw, "{s}.")
+	raw = strings.NewReplacer("{s}", "a", "{z}", "0", "{x}", "0", "{y}", "0").Replace(raw)
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+		return ""
+	}
+	host := u.Host
+	if wild { // tile subdomains a/b/c
+		host = "*." + strings.TrimPrefix(host, "a.")
+	}
+	return u.Scheme + "://" + host
+}
+
+func contentSecurityPolicy() string {
+	img, connect := "'self' data: blob:", "'self'"
+	if mapCfg.Enabled {
+		if o := originOf(mapCfg.TileURL); o != "" {
+			img += " " + o
+		}
+		if o := originOf(mapCfg.GeocoderURL); o != "" {
+			connect += " " + o
+		}
+	}
+	return "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src " + img + "; connect-src " + connect + "; script-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'"
+}
+
 func secureHeaders(next http.Handler) http.Handler {
+	csp := contentSecurityPolicy()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("X-Frame-Options", "DENY")
-		h.Set("Referrer-Policy", "same-origin")
+		h.Set("Referrer-Policy", "strict-origin-when-cross-origin") // map tile servers require a Referer
 		if isHTTPS(r) {
 			h.Set("Strict-Transport-Security", "max-age=31536000")
 		}
-		h.Set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'")
+		h.Set("Content-Security-Policy", csp)
 		next.ServeHTTP(w, r)
 	})
 }

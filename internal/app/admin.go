@@ -117,11 +117,7 @@ func (a *App) roleEditPage(c *C) {
 func (a *App) renderRole(c *C, role *Role, errMsg string) {
 	var rows []PermRow
 	for _, d := range permDefs() {
-		lvl, ok := role.Perms[d.Key]
-		if !ok && d.Key == "timeplan" {
-			lvl = min(role.Perms["tasks"], 1)
-		}
-		rows = append(rows, PermRow{d, lvl})
+		rows = append(rows, PermRow{d, rolePerm(role.Perms, d.Key)})
 	}
 	if errMsg != "" {
 		c.W.WriteHeader(422)

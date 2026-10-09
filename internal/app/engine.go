@@ -204,6 +204,11 @@ func (c *C) cellFor(m *Module, f *Field, r *Rec) Cell {
 			return Cell{Kind: "empty"}
 		}
 		return Cell{Kind: "link", Text: strings.TrimPrefix(strings.TrimPrefix(v, "https://"), "http://"), URL: v}
+	case TGeo:
+		if _, _, ok := parseGeo(v); ok {
+			return Cell{Kind: "geo", Val: v}
+		}
+		return Cell{Kind: "empty"}
 	case TColor, TRecipe, TTextarea:
 		return Cell{Kind: "empty"}
 	}
@@ -604,7 +609,7 @@ func (c *C) fieldViews(m *Module, rec *Rec, errs map[string]string, vals map[str
 	var out []*FieldView
 	for i := range m.Fields {
 		f := &m.Fields[i]
-		fv := &FieldView{F: f, Show: true}
+		fv := &FieldView{F: f, Show: !f.NoForm}
 		if f.Fin && !m.Global && rec != nil && rec.ID != 0 && !c.finVisible(rec, m.PermKey()) {
 			fv.Show = false
 		}
@@ -756,8 +761,23 @@ func (c *C) collect(m *Module, rec *Rec) (map[string]string, map[string]string) 
 				continue
 			}
 		}
+		if f.NoForm {
+			if rec != nil {
+				vals[f.Key] = rec.S(f.Key)
+			}
+			continue
+		}
 		v := strings.TrimSpace(r.FormValue(f.Key))
 		switch f.Type {
+		case TGeo:
+			if v != "" {
+				if lat, lng, ok := parseGeo(v); ok {
+					v = fmt.Sprintf("%.6f,%.6f", lat, lng)
+				} else {
+					errs[f.Key] = "Ungültige Position."
+					v = ""
+				}
+			}
 		case TBool:
 			if r.FormValue(f.Key) != "" {
 				v = "1"

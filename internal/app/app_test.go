@@ -292,6 +292,62 @@ func TestCalendarTokenFeed(t *testing.T) {
 	}
 }
 
+func TestGeoAndGeometryValidation(t *testing.T) {
+	if lat, lng, ok := parseGeo("49.0069, 8.4037"); !ok || !near(lat, 49.0069) || !near(lng, 8.4037) {
+		t.Fatalf("parseGeo = %v %v %v", lat, lng, ok)
+	}
+	for _, bad := range []string{"", "49", "91,0", "0,181", "a,b", "1,2,3"} {
+		if _, _, ok := parseGeo(bad); ok {
+			t.Errorf("parseGeo(%q) should fail", bad)
+		}
+	}
+	if _, ok := validGeom([]byte(`{"t":"poly","p":[[0.1,0.1],[0.5,0.1],[0.5,0.5]]}`), "image"); !ok {
+		t.Error("valid polygon rejected")
+	}
+	for _, bad := range []string{
+		`{"t":"poly","p":[[0,0],[1,1]]}`,       // too few points
+		`{"t":"point","p":[[0,0],[1,1]]}`,      // too many points
+		`{"t":"poly","p":[[0,0],[1,1],[9,9]]}`, // outside image range
+		`{"t":"circle","p":[[0,0]]}`,           // unknown type
+		`not json`,
+	} {
+		if _, ok := validGeom([]byte(bad), "image"); ok {
+			t.Errorf("validGeom accepted %s", bad)
+		}
+	}
+	if _, ok := validGeom([]byte(`{"t":"point","p":[[49,8]]}`), "map"); !ok {
+		t.Error("map point rejected")
+	}
+	if _, ok := validGeom([]byte(`{"t":"point","p":[[95,8]]}`), "map"); ok {
+		t.Error("latitude 95 accepted")
+	}
+}
+
+func TestImageTypeSniffing(t *testing.T) {
+	if imageType([]byte("\x89PNG\r\n\x1a\nxxxx")) != "image/png" || imageType([]byte("\xff\xd8\xff\xe0")) != "image/jpeg" {
+		t.Fatal("raster images not recognised")
+	}
+	for _, bad := range []string{"<svg xmlns=", "<html><script>", "%PDF-1.7", ""} {
+		if imageType([]byte(bad)) != "" {
+			t.Errorf("%q must not count as an image", bad)
+		}
+	}
+}
+
+func TestCSPAllowsOnlyConfiguredMapHosts(t *testing.T) {
+	old := mapCfg
+	defer func() { mapCfg = old }()
+	mapCfg = MapConfig{Enabled: true, TileURL: "https://{s}.tiles.example.org/{z}/{x}/{y}.png", GeocoderURL: "https://geo.example.org/search"}
+	csp := contentSecurityPolicy()
+	if !strings.Contains(csp, "img-src 'self' data: blob: https://*.tiles.example.org") || !strings.Contains(csp, "connect-src 'self' https://geo.example.org") {
+		t.Fatalf("csp = %s", csp)
+	}
+	mapCfg.Enabled = false
+	if csp := contentSecurityPolicy(); strings.Contains(csp, "example.org") {
+		t.Fatalf("maps off must not whitelist hosts: %s", csp)
+	}
+}
+
 func TestNumberParsing(t *testing.T) {
 	cases := map[string]float64{"1,5": 1.5, "1.234,56": 1234.56, "3.5": 3.5, "": 0, " 12 ": 12}
 	for in, want := range cases {

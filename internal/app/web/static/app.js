@@ -13,6 +13,7 @@
     drawer.innerHTML = html;
     if (!drawer.open) drawer.showModal();
     initWidgets(drawer);
+    initMaps(drawer);
     var f = drawer.querySelector('input:not([type=hidden]), select, textarea');
     if (f && !f.value) f.focus();
   }
@@ -25,6 +26,8 @@
       openDrawer(a.getAttribute('href') || a.getAttribute('data-modal'));
       return;
     }
+    var nn = e.target.closest('[data-togglenew]');
+    if (nn) { var dd = document.getElementById('neuer-plan'); if (dd) dd.open = true; }
     if (e.target.closest('[data-close]')) { e.preventDefault(); closeDrawer(); return; }
     var row = e.target.closest('tr[data-href]');
     if (row && !e.target.closest('a, button, select, input, label, form')) {
@@ -123,5 +126,28 @@
     scope.querySelectorAll('.recipe').forEach(function (r) { if (!r.dataset.ready) { r.dataset.ready = 1; initRecipe(r); } });
   }
   initWidgets(document);
+
+  // maps are loaded on demand so pages without maps stay light
+  var leafletReady = null;
+  function loadScript(src) {
+    return new Promise(function (res, rej) {
+      var s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s);
+    });
+  }
+  function loadLeaflet() {
+    if (leafletReady) return leafletReady;
+    var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/static/vendor/leaflet/leaflet.css?v=1'; document.head.appendChild(l);
+    leafletReady = loadScript('/static/vendor/leaflet/leaflet.js?v=1').then(function () { return loadScript('/static/maps.js?v=2'); });
+    return leafletReady;
+  }
+  function initMaps(scope) {
+    var wantsSite = scope === document && document.getElementById('siteplan');
+    if (!scope.querySelector('.kmap:not([data-ready]), .kgeo:not([data-ready])') && !wantsSite) return;
+    loadLeaflet().then(function () {
+      window.KMaps.init(scope);
+      if (wantsSite && !window.KSite) loadScript('/static/siteplan.js?v=2');
+    });
+  }
+  initMaps(document);
 
 })();

@@ -48,9 +48,9 @@ func (a *App) seedDemo() {
 	pia := contact("Pia B. (fiktiv)", "person", "DJ", "")
 	_ = contact("Getränkehandel Demo (fiktiv)", "company", "Lieferant", "+49 000 0000005")
 	amt := contact("Ordnungsamt Beispielstadt (fiktiv)", "authority", "Behörde", "")
-	hall := loc(map[string]string{"name": "Lagerhalle Süd (fiktiv)", "kind": "indoor", "city": "Beispielstadt", "capacity": "250", "rent": "1200", "owner": itoa(vermieter), "curfew": "Open End bis 6 Uhr"})
-	field := loc(map[string]string{"name": "Waldlichtung Beispielhain (fiktiv)", "kind": "outdoor", "city": "Beispielhain", "capacity": "400", "rent": "1800", "curfew": "Musik bis 3 Uhr", "notes": "Strom und Wasser nicht vorhanden. Zufahrt über Feldweg."})
-	_ = loc(map[string]string{"name": "Festplatz Demo-Aue (fiktiv)", "kind": "outdoor", "city": "Beispielstadt", "capacity": "1500", "rent": "900"})
+	hall := loc(map[string]string{"name": "Lagerhalle Süd (fiktiv)", "kind": "indoor", "city": "Beispielstadt", "capacity": "250", "rent": "1200", "owner": itoa(vermieter), "geo": "49.014200,8.389500", "curfew": "Open End bis 6 Uhr"})
+	field := loc(map[string]string{"name": "Waldlichtung Beispielhain (fiktiv)", "kind": "outdoor", "city": "Beispielhain", "capacity": "400", "rent": "1800", "geo": "49.021500,8.412300", "curfew": "Musik bis 3 Uhr", "notes": "Strom und Wasser nicht vorhanden. Zufahrt über Feldweg."})
+	_ = loc(map[string]string{"name": "Festplatz Demo-Aue (fiktiv)", "kind": "outdoor", "city": "Beispielstadt", "capacity": "1500", "rent": "900", "geo": "49.001000,8.430000"})
 
 	var tpl *Template
 	for _, t := range a.templates() {
@@ -139,6 +139,22 @@ func (a *App) seedDemo() {
 			_ = a.saveRec(p)
 		}
 	}
+	// demo site plan on the map around the (fictional) field
+	plan := add("siteplans", map[string]string{"name": "Gelände (Karte)", "mode": "map", "geo": "49.021500,8.412300", "zoom": "18"})
+	poly := func(lat, lng, dlat, dlng float64) string {
+		return fmt.Sprintf(`{"t":"poly","p":[[%f,%f],[%f,%f],[%f,%f],[%f,%f]]}`, lat, lng, lat, lng+dlng, lat+dlat, lng+dlng, lat+dlat, lng)
+	}
+	pt := func(lat, lng float64) string { return fmt.Sprintf(`{"t":"point","p":[[%f,%f]]}`, lat, lng) }
+	item := func(title, kind, ar, geom string) {
+		add("site_items", map[string]string{"plan": itoa(plan.ID), "title": title, "kind": kind, "area": itoa(area[ar]), "geom": geom})
+	}
+	item("Main Floor", "dance", "Technik & Sound", poly(49.02145, 8.41215, 0.00025, 0.00040))
+	item("Bühne", "stage", "Technik & Sound", poly(49.02170, 8.41225, 0.00010, 0.00020))
+	item("Bar", "bar", "Bar", poly(49.02145, 8.41262, 0.00012, 0.00018))
+	item("Einlass", "entry", "Einlass & Kasse", pt(49.02130, 8.41200))
+	item("Toiletten", "wc", "Aufbau & Deko", pt(49.02175, 8.41275))
+	item("Notausgang Ost", "safety", "Security & Sanitäts", pt(49.02160, 8.41290))
+	add("site_items", map[string]string{"plan": itoa(plan.ID), "title": "Fluchtweg Ost", "kind": "route", "geom": `{"t":"line","p":[[49.02158,8.41255],[49.02160,8.41275],[49.02162,8.41292]]}`})
 	for _, rl := range a.roles() {
 		if rl.Name == "Orga-Leitung" {
 			a.setMember(e.ID, admin.ID, rl.ID, nil)

@@ -105,6 +105,7 @@ func init() {
 		Key: "loc_candidates", Name: "Location-Suche", Singular: "Anfrage", Icon: "pin", Default: true, Order: 4,
 		Desc:  "Locations anfragen und vergleichen. Eine Anfrage lässt sich als gewählte Location festlegen.",
 		Title: "location", Filters: []string{"status"}, Empty: "Noch keine Location angefragt.",
+		ExtraTpl: "x_map", Extra: candidatesMapExtra,
 		Fields: []Field{
 			F("location", "Location", TRef).Of("locations").Req().List(),
 			F("status", "Status", TSelect).Options(O("idea", "Idee", "gray"), O("asked", "Angefragt", "blue"), O("viewing", "Besichtigung", "yellow"), O("offer", "Angebot", "orange"), O("yes", "Zusage", "green"), O("no", "Absage", "red")).Def("idea").Quick_(),
@@ -278,6 +279,31 @@ func init() {
 	})
 
 	reg(&Module{
+		Key: "sitemap", Name: "Lageplan", Icon: "map", Default: true, Order: 11, Page: "lageplan",
+		Desc: "Wo steht was? Plan hochladen oder direkt auf der Karte planen, Bereiche, Bühne, Bar und Fluchtwege einzeichnen.",
+	})
+	reg(&Module{
+		Key: "siteplans", Name: "Pläne", Singular: "Plan", Perm: "sitemap", Hidden: true, Title: "name", Sort: "name",
+		Fields: []Field{
+			F("name", "Name", TText).Req().List(),
+			F("mode", "Art", TSelect).Options(O("image", "Bild (eigener Plan)", "blue"), O("map", "Karte", "green")).Def("image"),
+			F("width_m", "Breite des Plans", TNumber).Unit("Meter").Hint("Für Flächenangaben bei Bildplänen: wie breit ist das ganze Bild in der Wirklichkeit?"),
+			F("geo", "Kartenmitte", TGeo).Wide_(),
+			F("zoom", "Zoomstufe", TNumber),
+		},
+	})
+	reg(&Module{
+		Key: "site_items", Name: "Plan-Objekte", Singular: "Objekt", Perm: "sitemap", Hidden: true, Title: "title", Sort: "title", AreaField: "area",
+		Fields: []Field{
+			F("plan", "Plan", TRef).Of("siteplans").Req(),
+			F("title", "Bezeichnung", TText).Req().List(),
+			F("kind", "Art", TSelect).Options(siteKindOpts()...).Def("zone").List(),
+			F("area", "Bereich", TRef).Of("areas").List(),
+			F("geom", "Geometrie", TText).Hidden_(),
+			F("notes", "Notizen", TTextarea).Wide_(),
+		},
+	})
+	reg(&Module{
 		Key: "notes", Name: "Notizen & Links", Singular: "Notiz", Icon: "note", Default: true, Order: 12,
 		Desc:  "Konzepte, Verträge, Ideen und Links, die zum Event gehören.",
 		Title: "title", Sort: "-updated", Filters: []string{"category"}, AreaField: "area", Empty: "Noch keine Notizen.",
@@ -303,18 +329,22 @@ func init() {
 			F("phone", "Telefon", TText).List(),
 			F("email", "E-Mail", TText).List(),
 			F("address", "Adresse", TTextarea),
+			F("geo", "Position auf der Karte", TGeo).Wide_().Hint("Optional, z. B. für Lieferanten und Vermieter."),
 			F("notes", "Notizen", TTextarea).Wide_(),
 		},
+		ExtraTpl: "x_map", Extra: contactsMapExtra,
 	})
 	reg(&Module{
 		Key: "locations", Name: "Locations", Singular: "Location", Icon: "pin", Global: true, Order: 101,
 		Desc:  "Orte, die ihr nutzen könntet oder schon genutzt habt.",
 		Title: "name", Sort: "name", Filters: []string{"kind"}, Empty: "Noch keine Locations.",
+		ExtraTpl: "x_map", Extra: locationsMapExtra,
 		Fields: []Field{
 			F("name", "Name", TText).Req().List(),
 			F("kind", "Art", TSelect).Options(O("indoor", "Indoor", "blue"), O("outdoor", "Outdoor", "green"), O("mixed", "Beides", "teal")).Def("indoor").List(),
 			F("city", "Ort", TText).List(),
 			F("address", "Adresse", TText),
+			F("geo", "Position auf der Karte", TGeo).Wide_().List().Hint("Adresse suchen oder direkt auf die Karte klicken."),
 			F("capacity", "Kapazität", TNumber).Unit("Personen").List().Hint("Maximal zulässige Personenzahl."),
 			F("rent", "Typische Kosten", TMoney).Unit("€").List(),
 			F("owner", "Ansprechperson", TRef).Of("contacts").List(),

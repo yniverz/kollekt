@@ -36,6 +36,7 @@ type OverviewView struct {
 	LocCap   float64
 	Areas    []*AreaCard
 	Team     []*Member
+	Pin      *MapView
 }
 
 func (c *C) modLink(key string) string {
@@ -298,6 +299,7 @@ func (c *C) handleOverview(w http.ResponseWriter, r *http.Request) {
 	if ar, ok := areasExtra(c).(*AreasView); ok {
 		v.Areas = ar.Cards
 	}
+	v.Pin = c.eventPin()
 	v.Audit = c.A.recentAudit(e.ID, 10)
 	v.Team = c.A.members(e.ID)
 	c.Page("overview.html", map[string]any{"Title": e.Name, "Nav": c.eventNav("overview"), "V": v, "EStatus": e.Status})

@@ -1,0 +1,81 @@
+{{define "content"}}
+<div class="page-head">
+  <div><h1>Lageplan</h1><p class="sub">Wo steht was? Lade einen Plan hoch oder plane direkt auf der Karte. Jede Leitung zeichnet ihren Bereich, alle anderen sehen ihn mit.</p></div>
+  <div class="actions">{{if .Active}}<button class="btn" type="button" id="sp-print">Drucken</button>{{end}}</div>
+</div>
+
+<div class="tabs">
+  {{range .Tabs}}<a href="/e/{{$.Event.ID}}/lageplan?plan={{.ID}}" class="{{if .Active}}on{{end}}">{{.Name}}</a>{{end}}
+  {{if .CanPlan}}<a href="#neuer-plan" data-togglenew class="{{if not .Tabs}}on{{end}}">+ Neuer Plan</a>{{end}}
+</div>
+
+{{if and (not .Tabs) (not .CanPlan)}}<div class="tblwrap"><div class="empty">Noch kein Plan angelegt. Die Event-Leitung kann einen Plan hochladen.</div></div>{{end}}
+
+{{if .CanPlan}}
+<details class="panel d" id="neuer-plan" {{if not .Tabs}}open{{end}}>
+  <summary>Neuen Plan anlegen</summary>
+  <form method="post" action="/e/{{.Event.ID}}/lageplan/new" enctype="multipart/form-data" style="margin-top:10px" data-plain>
+    <input type="hidden" name="_csrf" value="{{.CSRF}}">
+    <div class="form-grid">
+      <div class="field"><label class="lbl" for="pn">Name</label><input id="pn" name="name" placeholder="z. B. Gelände, Aufbauplan, Floor 2" required maxlength="80"></div>
+      <div class="field"><label class="lbl" for="pm">Art</label>
+        <select id="pm" name="mode"><option value="image">Bild (eigener Plan, Skizze, Foto, Screenshot)</option>{{if .MapsOn}}<option value="map">Karte (OpenStreetMap)</option>{{end}}</select></div>
+      <div class="field"><label class="lbl" for="pf">Plan-Bild</label><input id="pf" type="file" name="file" accept="image/png,image/jpeg,image/gif,image/webp"><div class="help">PNG, JPG, GIF oder WebP bis 25 MB. Nur für „Bild“. PDF-Pläne bitte vorher als Bild exportieren.</div></div>
+      <div class="field"><label class="lbl" for="pw">Breite des Plans in Metern</label><input id="pw" name="width_m" type="number" step="any" min="1" placeholder="optional"><div class="help">Damit rechnet Kollekt Flächen und Längen aus. Bei Karten nicht nötig.</div></div>
+    </div>
+    <button class="btn primary">Plan anlegen</button>
+  </form>
+</details>
+{{end}}
+
+{{if .Active}}
+<div id="siteplan" data-api="{{.API}}">
+  {{if not .HasImage}}<div class="errbox">Zu diesem Plan fehlt ein Bild. Lade unten unter „Plan-Einstellungen“ eines hoch.</div>{{end}}
+  <div class="sp-wrap">
+    <div>
+      {{if .CanEdit}}
+      <div class="sp-bar">
+        <button type="button" class="btn sm on" data-sptool="select">Auswählen</button>
+        <button type="button" class="btn sm" data-sptool="point">Punkt</button>
+        <button type="button" class="btn sm" data-sptool="rect">Rechteck</button>
+        <button type="button" class="btn sm" data-sptool="poly">Fläche</button>
+        <button type="button" class="btn sm" data-sptool="line">Linie</button>
+        <select id="sp-kind" aria-label="Art des neuen Objekts"></select>
+        <select id="sp-area" aria-label="Bereich des neuen Objekts"></select>
+      </div>
+      {{end}}
+      <div id="sp-map"></div>
+      <p class="muted small" id="sp-hint" style="margin:6px 0 0"></p>
+      <p class="small muted" id="sp-msg" style="margin:4px 0 0"></p>
+      <div id="sp-legend" style="margin-top:8px"></div>
+    </div>
+    <div id="sp-side" class="panel">
+      <h2>Objekt</h2>
+      <div id="sp-form"></div>
+      <div class="hr"></div>
+      <h2>Alle Objekte</h2>
+      <div id="sp-list"></div>
+    </div>
+  </div>
+
+  {{if .CanPlan}}
+  <details class="panel d noprint" style="margin-top:18px">
+    <summary>Plan-Einstellungen</summary>
+    <form method="post" action="/e/{{.Event.ID}}/lageplan/{{.Active.ID}}" enctype="multipart/form-data" style="margin-top:10px" data-plain>
+      <input type="hidden" name="_csrf" value="{{.CSRF}}">
+      <div class="form-grid">
+        <div class="field"><label class="lbl" for="en">Name</label><input id="en" name="name" value="{{.Active.S "name"}}" maxlength="80" required></div>
+        {{if eq (.Active.S "mode") "image"}}
+        <div class="field"><label class="lbl" for="ew">Breite des Plans in Metern</label><input id="ew" name="width_m" type="number" step="any" min="1" value="{{.Active.S "width_m"}}"></div>
+        <div class="field wide"><label class="lbl" for="ef">Bild ersetzen</label><input id="ef" type="file" name="file" accept="image/png,image/jpeg,image/gif,image/webp"><div class="help">Die eingezeichneten Objekte bleiben erhalten. Bei verändertem Bildausschnitt passen sie eventuell nicht mehr.</div></div>
+        {{end}}
+      </div>
+      <div class="actions"><button class="btn primary">Speichern</button>
+        {{if eq (.Active.S "mode") "map"}}<button type="button" class="btn" id="sp-saveview">Aktuellen Kartenausschnitt als Standard speichern</button>{{end}}</div>
+    </form>
+    <form method="post" action="/e/{{.Event.ID}}/lageplan/{{.Active.ID}}/delete" style="margin-top:12px"><input type="hidden" name="_csrf" value="{{.CSRF}}"><button class="btn danger sm" data-confirm="Plan samt allen eingezeichneten Objekten löschen?">Plan löschen</button></form>
+  </details>
+  {{end}}
+</div>
+{{end}}
+{{end}}

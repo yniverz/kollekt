@@ -75,7 +75,7 @@ func (a *App) saveTemplate(t *Template) error {
 // instantiate fills an (already saved) event from a payload.
 func (a *App) instantiate(e *Event, p TplPayload, userID int64) {
 	idMap := map[string]map[string]int64{}
-	order := []string{"areas", "bar_items"}
+	order := []string{"areas", "bar_items", "siteplans"}
 	byMod := map[string][]TplRec{}
 	for _, r := range p.Records {
 		byMod[r.Module] = append(byMod[r.Module], r)
@@ -153,7 +153,7 @@ func (a *App) snapshot(e *Event, o SnapOpts) TplPayload {
 	}
 	for _, r := range a.allEventRecs(e.ID) {
 		mod := modByKey[r.Module]
-		if mod == nil || r.Module == "loc_candidates" {
+		if mod == nil || r.Module == "loc_candidates" || r.Module == "siteplans" || r.Module == "site_items" {
 			continue
 		}
 		d := map[string]string{}

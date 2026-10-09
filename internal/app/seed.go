@@ -18,17 +18,17 @@ func allPerms(level int) map[string]int {
 }
 
 func (a *App) seed() {
-	defer a.migrateTimeplan()
+	defer a.migrateModules()
 	var n int
 	_ = a.db.QueryRow("SELECT COUNT(*) FROM roles").Scan(&n)
 	if n == 0 {
 		orga := allPerms(2)
 		fin := allPerms(1)
 		fin["budget"], fin["calc"], fin["fin"] = 2, 2, 2
-		bereich := map[string]int{"areas": 1, "tasks": 2, "budget": 2, "equipment": 2, "staff": 2, "timeline": 1, "notes": 2, "permits": 1, "lineup": 1, "bar": 1}
-		bar := map[string]int{"areas": 1, "tasks": 2, "budget": 2, "equipment": 2, "staff": 2, "timeline": 1, "notes": 2, "bar": 2, "lineup": 1}
-		booking := map[string]int{"areas": 1, "tasks": 2, "lineup": 2, "timeline": 2, "notes": 2, "fin": 1, "budget": 1, "permits": 1}
-		helfer := map[string]int{"areas": 1, "tasks": 1, "staff": 1, "timeline": 1, "notes": 1}
+		bereich := map[string]int{"areas": 1, "tasks": 2, "budget": 2, "equipment": 2, "staff": 2, "timeline": 1, "notes": 2, "permits": 1, "lineup": 1, "bar": 1, "sitemap": 2}
+		bar := map[string]int{"areas": 1, "tasks": 2, "budget": 2, "equipment": 2, "staff": 2, "timeline": 1, "notes": 2, "bar": 2, "lineup": 1, "sitemap": 2}
+		booking := map[string]int{"areas": 1, "tasks": 2, "lineup": 2, "timeline": 2, "notes": 2, "fin": 1, "budget": 1, "permits": 1, "sitemap": 1}
+		helfer := map[string]int{"sitemap": 1, "areas": 1, "tasks": 1, "staff": 1, "timeline": 1, "notes": 1}
 		read := allPerms(1)
 		read["settings"] = 0
 		for _, r := range []*Role{

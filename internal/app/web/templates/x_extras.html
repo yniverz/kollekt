@@ -113,3 +113,7 @@
 {{else}}{{end}}
 {{if $t.Days}}<h2 style="margin:18px 0 10px">Einträge bearbeiten</h2>{{end}}
 {{end}}
+
+{{define "x_map"}}{{$m := .Extra}}{{if $m}}{{if $m.Points}}
+<div class="kmap" data-points="{{$m.JSON}}" data-height="{{$m.Height}}"></div>
+{{else if $m.Hint}}<p class="muted small" style="margin:-4px 0 14px">{{$m.Hint}}</p>{{end}}{{end}}{{end}}

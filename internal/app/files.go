@@ -4,9 +4,11 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"mime"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -306,4 +308,37 @@ func (c *C) handleFileDelete(w http.ResponseWriter, r *http.Request) {
 		next = c.modListURL(m)
 	}
 	c.back(next)
+}
+
+// saveUpload stores one uploaded file below the data directory and registers it.
+func (c *C) saveUpload(fh *multipart.FileHeader, eventID int64, module string, recordID int64) error {
+	if fh.Size > maxUpload || fh.Size == 0 {
+		return errors.New("Die Datei ist leer oder größer als 25 MB.")
+	}
+	src, err := fh.Open()
+	if err != nil {
+		return errors.New("Die Datei konnte nicht gelesen werden.")
+	}
+	defer src.Close()
+	if err := os.MkdirAll(c.A.filesDir(), 0o700); err != nil {
+		return errors.New("Dateispeicher nicht verfügbar.")
+	}
+	stored := randToken(16)
+	path := filepath.Join(c.A.filesDir(), stored)
+	dst, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return errors.New("Dateispeicher nicht verfügbar.")
+	}
+	n, err := io.Copy(dst, io.LimitReader(src, maxUpload+1))
+	dst.Close()
+	if err != nil || n > maxUpload {
+		_ = os.Remove(path)
+		return errors.New("Die Datei ist zu groß oder konnte nicht gespeichert werden.")
+	}
+	if _, err := c.A.db.Exec("INSERT INTO files(event_id,module,record_id,name,size,stored,created_by,created_at) VALUES(?,?,?,?,?,?,?,?)",
+		eventID, module, recordID, cleanFilename(fh.Filename), n, stored, c.User.ID, time.Now().Unix()); err != nil {
+		_ = os.Remove(path)
+		return errors.New("Die Datei konnte nicht registriert werden.")
+	}
+	return nil
 }

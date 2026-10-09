@@ -59,6 +59,7 @@
 {{else if eq $c.Kind "money"}}<td class="num">{{$c.Text}}</td>
 {{else if eq $c.Kind "number"}}<td class="num">{{$c.Text}}</td>
 {{else if eq $c.Kind "bool"}}<td>{{if eq $c.Val "1"}}<span class="chk on" title="Ja"></span>{{else}}<span class="chk" title="Nein"></span>{{end}}</td>
+{{else if eq $c.Kind "geo"}}<td title="{{$c.Val}}">{{icon "pin"}}</td>
 {{else if eq $c.Kind "link"}}<td><a href="{{safeURL $c.URL}}" target="_blank" rel="noopener noreferrer">{{$c.Text}}</a></td>
 {{else if eq $c.Kind "empty"}}<td class="{{if $c.Num}}num{{end}} muted">–</td>
 {{else}}<td class="{{$c.Color}}">{{$c.Text}}</td>{{end}}{{end}}

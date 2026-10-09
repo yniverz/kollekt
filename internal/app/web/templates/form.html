@@ -53,6 +53,7 @@
     {{else if eq (printf "%s" $f.Type) "ref"}}<select id="f_{{$f.Key}}" name="{{$f.Key}}"><option value="">{{if $f.Required}}Bitte wählen …{{else}}–{{end}}</option>{{range .Opts}}<option value="{{.ID}}" {{if .Sel}}selected{{end}}>{{.Title}}</option>{{end}}</select>
     {{else if eq (printf "%s" $f.Type) "date"}}<input id="f_{{$f.Key}}" type="date" name="{{$f.Key}}" value="{{.Value}}">
     {{else if eq (printf "%s" $f.Type) "datetime"}}<input id="f_{{$f.Key}}" type="datetime-local" name="{{$f.Key}}" value="{{.Value}}">
+    {{else if eq (printf "%s" $f.Type) "geo"}}<div class="kgeo"><input type="hidden" name="{{$f.Key}}" value="{{.Value}}"></div>
     {{else if eq (printf "%s" $f.Type) "color"}}<input id="f_{{$f.Key}}" type="color" name="{{$f.Key}}" value="{{if .Value}}{{.Value}}{{else}}#8a8f98{{end}}">
     {{else if eq (printf "%s" $f.Type) "recipe"}}
       <div class="recipe" data-items="{{.Items}}"><input type="hidden" name="{{$f.Key}}" value="{{.Value}}"><div class="rlines"></div><button type="button" class="btn sm radd">{{icon "plus"}} Zutat</button></div>

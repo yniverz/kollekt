@@ -22,6 +22,8 @@ Kollekt ist **kein Ticketsystem und keine Kasse**. Es dient der Planung und dem 
 | **Personal** | Schichtplan mit offenen Plätzen, Stunden und Kosten pro Bereich/Person, Doppelbelegungen |
 | **Ablaufplan** | Programm von Aufbau bis Abbau, Line-up wird automatisch eingeblendet |
 | **Material** | Bedarf, Beschaffung (eigen/geliehen/gemietet), Status, Kosten |
+| **Lageplan** | Wo steht was? Eigenen Plan (PNG/JPG/WebP) hochladen oder direkt auf einer OpenStreetMap-Karte planen. Punkte, Flächen, Rechtecke und Linien für Bühne, Bar, Einlass, Toiletten, Fluchtwege und Zäune, farbig nach Bereich, mit Flächen- und Längenberechnung. Jede Leitung zeichnet nur in ihrem Bereich, alle anderen sehen mit |
+| **Karten & Pins** | Locations und Kontakte haben eine Position auf der Karte (Adresssuche oder Klick). Übersichtskarte aller Locations, Karte der Location-Anfragen und der Ort des Events in der Übersicht |
 | **Anhänge** | An fast jedem Eintrag (Rechnung, Vertrag, Bescheid, Plan …): bis 25 MB pro Datei, höchstens 20 pro Eintrag, Büroklammer-Hinweis in der Liste |
 | **Stammdaten** | Kontakte, Locations und Artikelstamm gelten für alle Events: Events werden aus diesen Bausteinen zusammengeklickt |
 
@@ -54,6 +56,10 @@ Danach `http://localhost:8080` öffnen. Beim ersten Aufruf erscheint die Einrich
 | `KOLLEKT_ADMIN_USER` / `KOLLEKT_ADMIN_PASSWORD` | leer | Admin-Konto beim ersten Start anlegen (Passwort 10 bis 72 Zeichen) |
 | `KOLLEKT_TRUST_PROXY` | leer | `1` übernimmt die Client-IP aus `X-Forwarded-For` (nur hinter eigenem Proxy, sonst fälschbar) |
 | `KOLLEKT_SOURCE_URL` | GitHub-Repo | Ziel des „Quellcode“-Links in der Fußzeile. Wer eine geänderte Version betreibt, muss hier auf den eigenen Quellcode verweisen (AGPL § 13) |
+| `KOLLEKT_MAPS` | an | `off` schaltet alle Funktionen mit externen Kartendiensten ab (Pins, Kartenpläne, Adresssuche). Bildpläne funktionieren weiter |
+| `KOLLEKT_TILE_URL` | OpenStreetMap | Kachelserver, z. B. ein eigener oder ein Anbieter mit Vertrag. Platzhalter `{z}/{x}/{y}` und optional `{s}` |
+| `KOLLEKT_TILE_ATTRIBUTION` | © OpenStreetMap-Mitwirkende | Quellenangabe, die im Kartenrand erscheint. Bei einem anderen Anbieter anpassen |
+| `KOLLEKT_GEOCODER_URL` | Nominatim | Dienst für die Adresssuche |
 | `KOLLEKT_DEMO_DATA` | leer | `1` legt in einer leeren Installation ein Demo-Event mit frei erfundenen Daten an |
 
 **Backup:** Das Volume `/data` enthält alles (`kollekt.db` und der Ordner `files/` mit den Anhängen). Im laufenden Betrieb am besten mit `sqlite3 kollekt.db ".backup backup.db"` sichern oder den Container kurz stoppen.
@@ -100,6 +106,12 @@ Die mitgelieferten Genehmigungslisten orientieren sich an Karlsruhe und Baden-W�
 ## Sicherheit und Datenschutz
 
 Siehe [SECURITY.md](SECURITY.md). Kurz: keine Zugangsdaten im Repository, Passwörter mit bcrypt, Sitzungen gehasht, CSRF-Schutz, serverseitige Rechteprüfung, strikte CSP, Anhänge nur als Download. Alle Beispieldaten (Vorlagen, Demo) sind frei erfunden.
+
+## Karten und Datenschutz
+
+Kartenkacheln und Adresssuche kommen standardmäßig von den öffentlichen OpenStreetMap-Servern (Kacheln: `tile.openstreetmap.org`, Suche: `nominatim.openstreetmap.org`). Dabei sieht OpenStreetMap die IP-Adresse und Anfragen der Nutzenden. Die öffentlichen Server sind für gelegentliche, kleine Nutzung gedacht (siehe deren Nutzungsrichtlinien). Für größere Installationen eigene Dienste über die Variablen oben eintragen. Mit `KOLLEKT_MAPS=off` gibt es keinerlei Verbindungen zu Kartendiensten. Bildpläne im Lageplan brauchen nie einen externen Dienst. Die Content-Security-Policy erlaubt nur die konfigurierten Hosts.
+
+Mitgeliefert: [Leaflet](https://leafletjs.com) 1.9.4 (BSD-2-Clause, Lizenztext unter `internal/app/web/static/vendor/leaflet/LICENSE`).
 
 ## Lizenz
 
