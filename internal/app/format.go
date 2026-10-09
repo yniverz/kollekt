@@ -1,3 +1,6 @@
+// Copyright (C) 2026 yniverz
+// SPDX-License-Identifier: AGPL-3.0-only
+
 package app
 
 import (

@@ -42,6 +42,7 @@
   <main class="main" id="main">
     {{if .Flash}}<div class="flash" role="status"><span>{{.Flash}}</span></div>{{end}}
     {{template "content" .}}
+    <footer class="foot muted small">Kollekt · freie Software unter AGPL-3.0 · <a href="{{.SourceURL}}" target="_blank" rel="noopener noreferrer">Quellcode</a></footer>
   </main>
 </div>
 <dialog id="drawer" class="drawer" aria-label="Bearbeiten"></dialog>

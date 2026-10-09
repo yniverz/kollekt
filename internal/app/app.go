@@ -1,3 +1,6 @@
+// Copyright (C) 2026 yniverz
+// SPDX-License-Identifier: AGPL-3.0-only
+
 package app
 
 import (
@@ -400,6 +403,7 @@ func (c *C) renderTpl(name string, data map[string]any) {
 		data = map[string]any{}
 	}
 	data["User"] = c.User
+	data["SourceURL"] = env("KOLLEKT_SOURCE_URL", "https://github.com/yniverz/kollekt")
 	if c.Sess != nil {
 		data["CSRF"] = c.Sess.CSRF
 	}

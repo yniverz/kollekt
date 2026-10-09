@@ -295,3 +295,7 @@ details.d > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 
 .filters select, .filters input[type=search] { width: auto; max-width: 100%; }
 .filters { align-items: center; }
+
+.foot { margin-top: 48px; padding-top: 14px; border-top: 1px solid var(--line); }
+.foot a { color: inherit; }
+@media print { .foot { display: none; } }

@@ -53,6 +53,7 @@ Danach `http://localhost:8080` öffnen. Beim ersten Aufruf erscheint die Einrich
 | `KOLLEKT_SECURE_COOKIES` | leer | `1` erzwingt Secure-Cookies (nur mit HTTPS!). Hinter HTTPS-Proxy (`X-Forwarded-Proto: https`) wird das automatisch erkannt. Bei reinem HTTP leer lassen, sonst klappt der Login nicht |
 | `KOLLEKT_ADMIN_USER` / `KOLLEKT_ADMIN_PASSWORD` | leer | Admin-Konto beim ersten Start anlegen (Passwort 10 bis 72 Zeichen) |
 | `KOLLEKT_TRUST_PROXY` | leer | `1` übernimmt die Client-IP aus `X-Forwarded-For` (nur hinter eigenem Proxy, sonst fälschbar) |
+| `KOLLEKT_SOURCE_URL` | GitHub-Repo | Ziel des „Quellcode“-Links in der Fußzeile. Wer eine geänderte Version betreibt, muss hier auf den eigenen Quellcode verweisen (AGPL § 13) |
 | `KOLLEKT_DEMO_DATA` | leer | `1` legt in einer leeren Installation ein Demo-Event mit frei erfundenen Daten an |
 
 **Backup:** Das Volume `/data` enthält alles (`kollekt.db` und der Ordner `files/` mit den Anhängen). Im laufenden Betrieb am besten mit `sqlite3 kollekt.db ".backup backup.db"` sichern oder den Container kurz stoppen.
@@ -99,3 +100,9 @@ Die mitgelieferten Genehmigungslisten orientieren sich an Karlsruhe und Baden-W�
 ## Sicherheit und Datenschutz
 
 Siehe [SECURITY.md](SECURITY.md). Kurz: keine Zugangsdaten im Repository, Passwörter mit bcrypt, Sitzungen gehasht, CSRF-Schutz, serverseitige Rechteprüfung, strikte CSP, Anhänge nur als Download. Alle Beispieldaten (Vorlagen, Demo) sind frei erfunden.
+
+## Lizenz
+
+Kollekt steht unter der [GNU Affero General Public License v3.0](LICENSE) (`AGPL-3.0-only`). Du darfst es nutzen, ändern und weitergeben. Wer es verändert und weitergibt oder als Webdienst für andere betreibt, muss den geänderten Quellcode unter derselben Lizenz bereitstellen. Für eine andere Lizenzierung bitte beim Urheber (yniverz) nachfragen.
+
+Beiträge sind willkommen, siehe [CONTRIBUTING.md](CONTRIBUTING.md).
