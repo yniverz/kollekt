@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # Basis-Images sind überschreibbar (die CI nutzt einen Spiegel, weil Docker Hub anonyme Pulls auf geteilten Runnern drosselt).
 ARG GO_IMAGE=golang:1.27-alpine
 ARG RUN_IMAGE=alpine:3.20
