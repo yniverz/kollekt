@@ -1,0 +1,5 @@
+/data/
+/kollekt
+*.db
+*.db-*
+.DS_Store
