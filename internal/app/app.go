@@ -40,10 +40,13 @@ type Config struct {
 	TileURL       string
 	TileAttrib    string
 	GeocoderURL   string
+	SatelliteURL  string
+	SatelliteAttr string
+	LabelsURL     string
 }
 
 func ConfigFromEnv() Config {
-	return Config{
+	cfg := Config{
 		DataDir:       env("KOLLEKT_DATA", "./data"),
 		Addr:          env("KOLLEKT_ADDR", ":8080"),
 		SecureCookies: env("KOLLEKT_SECURE_COOKIES", "") == "1",
@@ -55,7 +58,17 @@ func ConfigFromEnv() Config {
 		TileURL:       env("KOLLEKT_TILE_URL", "https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
 		TileAttrib:    env("KOLLEKT_TILE_ATTRIBUTION", "© OpenStreetMap-Mitwirkende"),
 		GeocoderURL:   env("KOLLEKT_GEOCODER_URL", "https://nominatim.openstreetmap.org/search"),
+		SatelliteURL:  env("KOLLEKT_SATELLITE_URL", "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"),
+		SatelliteAttr: env("KOLLEKT_SATELLITE_ATTRIBUTION", "Satellitenbilder © Esri, Maxar, Earthstar Geographics und die GIS-Nutzer-Community"),
+		LabelsURL:     env("KOLLEKT_LABELS_URL", "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"),
 	}
+	if strings.EqualFold(cfg.SatelliteURL, "off") {
+		cfg.SatelliteURL, cfg.LabelsURL = "", ""
+	}
+	if os.Getenv("KOLLEKT_SATELLITE_URL") != "" && os.Getenv("KOLLEKT_LABELS_URL") == "" {
+		cfg.LabelsURL = "" // a custom imagery provider has no matching label layer unless configured
+	}
+	return cfg
 }
 
 func env(k, d string) string {
@@ -80,7 +93,7 @@ func Run(cfg Config) error {
 	}
 	trustProxy = cfg.TrustProxy
 	weatherOff = cfg.WeatherOff
-	mapCfg = MapConfig{Enabled: !cfg.MapsOff, TileURL: cfg.TileURL, Attribution: cfg.TileAttrib, GeocoderURL: cfg.GeocoderURL}
+	mapCfg = MapConfig{Enabled: !cfg.MapsOff, TileURL: cfg.TileURL, Attribution: cfg.TileAttrib, GeocoderURL: cfg.GeocoderURL, SatelliteURL: cfg.SatelliteURL, SatelliteAttr: cfg.SatelliteAttr, LabelsURL: cfg.LabelsURL}
 	db, err := openDB(cfg.DataDir)
 	if err != nil {
 		return err
@@ -692,10 +705,13 @@ func (c *C) back(def string) {
 
 // MapConfig controls the optional map features (tiles and address search come from external services).
 type MapConfig struct {
-	Enabled     bool
-	TileURL     string
-	Attribution string
-	GeocoderURL string
+	Enabled       bool
+	TileURL       string
+	Attribution   string
+	GeocoderURL   string
+	SatelliteURL  string
+	SatelliteAttr string
+	LabelsURL     string
 }
 
 var mapCfg = MapConfig{}
@@ -717,8 +733,10 @@ func originOf(raw string) string {
 func contentSecurityPolicy() string {
 	img, connect := "'self' data: blob:", "'self'"
 	if mapCfg.Enabled {
-		if o := originOf(mapCfg.TileURL); o != "" {
-			img += " " + o
+		for _, u := range []string{mapCfg.TileURL, mapCfg.SatelliteURL, mapCfg.LabelsURL} {
+			if o := originOf(u); o != "" && !strings.Contains(img, o) {
+				img += " " + o
+			}
 		}
 		if o := originOf(mapCfg.GeocoderURL); o != "" {
 			connect += " " + o

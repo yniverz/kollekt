@@ -540,6 +540,20 @@ func TestChecklistTemplateRoundTrip(t *testing.T) {
 	}
 }
 
+func TestCSPIncludesSatelliteHostsOnlyWhenMapsAreOn(t *testing.T) {
+	old := mapCfg
+	defer func() { mapCfg = old }()
+	mapCfg = MapConfig{Enabled: true, TileURL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", SatelliteURL: "https://sat.example.org/{z}/{y}/{x}", LabelsURL: "https://sat.example.org/labels/{z}/{y}/{x}"}
+	csp := contentSecurityPolicy()
+	if !strings.Contains(csp, "https://sat.example.org") || strings.Count(csp, "https://sat.example.org") != 1 {
+		t.Fatalf("satellite host missing or duplicated: %s", csp)
+	}
+	mapCfg.Enabled = false
+	if strings.Contains(contentSecurityPolicy(), "sat.example.org") {
+		t.Fatal("maps off must not whitelist the satellite host")
+	}
+}
+
 func TestSafeLocalBlocksOpenRedirects(t *testing.T) {
 	for _, ok := range []string{"/", "/e/1/m/tasks", "/e/1/m/tasks?f_status=open&q=a"} {
 		if !safeLocal(ok) {

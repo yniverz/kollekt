@@ -69,6 +69,9 @@ Danach `http://localhost:8080` öffnen. Beim ersten Aufruf erscheint die Einrich
 | `KOLLEKT_MAPS` | an | `off` schaltet alle Funktionen mit externen Kartendiensten ab (Pins, Kartenpläne, Adresssuche). Bildpläne funktionieren weiter |
 | `KOLLEKT_TILE_URL` | OpenStreetMap | Kachelserver, z. B. ein eigener oder ein Anbieter mit Vertrag. Platzhalter `{z}/{x}/{y}` und optional `{s}` |
 | `KOLLEKT_TILE_ATTRIBUTION` | © OpenStreetMap-Mitwirkende | Quellenangabe, die im Kartenrand erscheint. Bei einem anderen Anbieter anpassen |
+| `KOLLEKT_SATELLITE_URL` | Esri World Imagery | Kachelserver für die Satellitenansicht (`{z}/{y}/{x}`). `off` entfernt die Satellitenansicht |
+| `KOLLEKT_SATELLITE_ATTRIBUTION` | Esri-Quellenangabe | Quellenangabe der Satellitenbilder |
+| `KOLLEKT_LABELS_URL` | Esri Beschriftung | Beschriftungs-Ebene für „Satellit mit Beschriftung“. Bei eigenem Satellitenserver leer, sofern nicht gesetzt |
 | `KOLLEKT_GEOCODER_URL` | Nominatim | Dienst für die Adresssuche |
 | `KOLLEKT_DEMO_DATA` | leer | `1` legt in einer leeren Installation ein Demo-Event mit frei erfundenen Daten an |
 
@@ -136,6 +139,8 @@ Siehe [SECURITY.md](SECURITY.md). Kurz: keine Zugangsdaten im Repository, Passw�
 Kartenkacheln und Adresssuche kommen standardmäßig von den öffentlichen OpenStreetMap-Servern (Kacheln: `tile.openstreetmap.org`, Suche: `nominatim.openstreetmap.org`). Dabei sieht OpenStreetMap die IP-Adresse und Anfragen der Nutzenden. Die öffentlichen Server sind für gelegentliche, kleine Nutzung gedacht (siehe deren Nutzungsrichtlinien). Für größere Installationen eigene Dienste über die Variablen oben eintragen. Mit `KOLLEKT_MAPS=off` gibt es keinerlei Verbindungen zu Kartendiensten. Die Wetterdaten ruft der Server (nicht der Browser) bei [Open-Meteo](https://open-meteo.com) ab und überträgt dabei nur die Koordinaten der Location und die Eventtage. Mit `KOLLEKT_WEATHER=off` ist das aus. Bildpläne im Lageplan brauchen nie einen externen Dienst. Die Content-Security-Policy erlaubt dem Browser nur die konfigurierten Kartenhosts.
 
 Alle Karten zoomen mit **⌘ + Scrollen** (Windows/Linux: Strg + Scrollen), per Trackpad-Pinch, mit den Plus/Minus-Knöpfen oder per Doppelklick. Normales Scrollen bewegt die Seite, ein Hinweis auf der Karte erinnert daran.
+
+**Satellitenansicht:** Oben rechts in jeder Karte wechselst du zwischen *Karte*, *Satellit* und *Satellit mit Beschriftung*. Die Wahl gilt für alle Karten und wird im Browser gemerkt. Die Bilder kommen standardmäßig von Esri World Imagery. Erst beim Umschalten verbindet sich der Browser mit Esri. Bitte prüfe die Nutzungsbedingungen von Esri, besonders bei kommerzieller oder intensiver Nutzung, und trage sonst einen eigenen Anbieter über die Variablen ein.
 
 Mitgeliefert: [Leaflet](https://leafletjs.com) 1.9.4 (BSD-2-Clause, Lizenztext unter `internal/app/web/static/vendor/leaflet/LICENSE`).
 

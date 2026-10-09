@@ -7,9 +7,20 @@
   var tileURL = meta('ktile'), attrib = meta('kattrib'), geocoder = meta('kgeocoder');
   if (window.L) L.Icon.Default.prototype.options.imagePath = '/static/vendor/leaflet/images/';
 
+  var satURL = meta('ksat'), satAttr = meta('ksatattr'), labelsURL = meta('klabels');
+  function remembered() { try { return localStorage.getItem('kollekt.maplayer') || ''; } catch (e) { return ''; } }
+  function remember(v) { try { localStorage.setItem('kollekt.maplayer', v); } catch (e) {} }
+  // Base maps: street map, satellite, satellite with labels. The choice is remembered for all maps.
   function baseLayer(map) {
     if (!enabled || !tileURL) return;
-    L.tileLayer(tileURL, { maxZoom: 19, attribution: attrib || '' }).addTo(map);
+    var street = L.tileLayer(tileURL, { maxNativeZoom: 19, maxZoom: 21, attribution: attrib || '' });
+    if (!satURL) { street.addTo(map); return; }
+    var sat = function () { return L.tileLayer(satURL, { maxNativeZoom: 18, maxZoom: 21, attribution: satAttr || '' }); };
+    var layers = { 'Karte': street, 'Satellit': sat() };
+    if (labelsURL) layers['Satellit mit Beschriftung'] = L.layerGroup([sat(), L.tileLayer(labelsURL, { maxNativeZoom: 17, maxZoom: 21 })]);
+    (layers[remembered()] || street).addTo(map);
+    L.control.layers(layers, null, { position: 'topright', collapsed: true }).addTo(map);
+    map.on('baselayerchange', function (e) { remember(e.name); });
   }
   // Plain wheel scrolls the page, Cmd/Ctrl + wheel (and trackpad pinch) zooms the map.
   var isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
