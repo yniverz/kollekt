@@ -307,6 +307,7 @@
   // ---- start ----
   function start(data) {
     D = data; mode = D.plan.mode;
+    D.items = D.items || []; D.areas = D.areas || []; D.kinds = D.kinds || [];
     var mapEl = document.getElementById('sp-map');
     if (mode === 'map') {
       if (!window.KMaps.enabled) { mapEl.textContent = 'Karten sind in dieser Installation deaktiviert.'; return; }

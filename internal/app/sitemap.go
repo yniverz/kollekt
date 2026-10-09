@@ -299,7 +299,7 @@ func (c *C) handleSiteData(w http.ResponseWriter, r *http.Request) {
 		Color    string `json:"color"`
 		Editable bool   `json:"editable"`
 	}
-	var areas []apiArea
+	areas := []apiArea{} // never null in JSON
 	for _, a := range c.Recs("areas") {
 		col := a.S("color")
 		if col == "" {
@@ -308,7 +308,7 @@ func (c *C) handleSiteData(w http.ResponseWriter, r *http.Request) {
 		colors[a.ID] = col
 		areas = append(areas, apiArea{a.ID, a.S("name"), col, c.itemEditable(a.ID)})
 	}
-	var items []apiItem
+	items := []apiItem{}
 	for _, it := range c.Recs("site_items") {
 		if it.I("plan") == plan.ID {
 			items = append(items, c.apiItemOf(it, colors))

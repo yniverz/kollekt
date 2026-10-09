@@ -4,6 +4,7 @@
 package app
 
 import (
+	"encoding/json"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -657,6 +658,29 @@ func TestICSHasOneEventPerDay(t *testing.T) {
 	}
 	if !strings.Contains(feed, "DTSTART:20261211T200000") || !strings.Contains(feed, "DTEND:20261212T010000") || !strings.Contains(feed, "DTSTART:20261212T140000") {
 		t.Fatalf("times wrong:\n%s", feed)
+	}
+}
+
+func TestEmptyPlanDataIsValidJSONLists(t *testing.T) {
+	a, e, c := testApp(t)
+	plan := &Rec{EventID: e.ID, Module: "siteplans", D: map[string]string{"name": "Leer", "mode": "map"}}
+	_ = a.saveRec(plan)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/", nil)
+	req.SetPathValue("pid", itoa(plan.ID))
+	c.W, c.R = rec, req
+	c.handleSiteData(rec, req)
+	var out struct {
+		Items, Areas, Kinds []any
+		Raw                 map[string]json.RawMessage
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out.Raw); err != nil {
+		t.Fatalf("not json: %v\n%s", err, rec.Body.String())
+	}
+	for _, k := range []string{"items", "areas", "kinds"} {
+		if string(out.Raw[k]) == "null" || len(out.Raw[k]) == 0 || out.Raw[k][0] != '[' {
+			t.Errorf("%s must be a JSON array, got %s", k, out.Raw[k])
+		}
 	}
 }
 
