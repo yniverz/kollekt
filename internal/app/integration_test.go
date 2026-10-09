@@ -657,3 +657,58 @@ func TestReturnPathSurvivesFiltersAndEveryClickStyle(t *testing.T) {
 		t.Errorf("after saving: %d -> %q, want 303 -> %q", resp.StatusCode, resp.Header.Get("Location"), list)
 	}
 }
+
+// Weird input must be rejected or stored safely, never crash a handler or break a page afterwards.
+func TestFormsSurviveHostileInput(t *testing.T) {
+	f := newFixture(t)
+	c := f.client("admin", "testpass-12345")
+	weird := []string{"", " ", "0", "-1", "1e309", "NaN", strings.Repeat("9", 40), strings.Repeat("x", 5000), "<script>alert(1)</script>", "'; DROP TABLE records;--",
+		"../../etc/passwd", "2026-13-45", "2026-02-30T25:61", "0,5", "1.000,50", "-9999999999", "\x00", "💥", "49.0,8.4", "999,999", "javascript:alert(1)"}
+	mods := []string{"areas", "tasks", "permits", "loc_candidates", "budget", "bar_items", "bar_products", "lineup", "staff", "timeline", "equipment", "notes", "power", "checklists", "logistics", "neighbors", "contacts", "locations", "articles"}
+	nameRe := regexp.MustCompile(`name="([a-z_]+)"`)
+	n := 0
+	for _, mod := range mods {
+		path := fmt.Sprintf("/e/%d/m/%s", f.ev.ID, mod)
+		if modByKey[mod].Global {
+			path = "/g/" + mod
+		}
+		_, form := c.partial(path + "/new")
+		fields := map[string]bool{}
+		for _, m := range nameRe.FindAllStringSubmatch(form, -1) {
+			if m[1] != "_csrf" && m[1] != "next" {
+				fields[m[1]] = true
+			}
+		}
+		for round := 0; round < len(weird); round++ {
+			data := url.Values{}
+			i := 0
+			for name := range fields {
+				data.Set(name, weird[(round+i)%len(weird)])
+				i++
+			}
+			resp := c.do("POST", path+"/new", data, map[string]string{"X-Partial": "1"})
+			resp.Body.Close()
+			n++
+			if resp.StatusCode >= 500 {
+				t.Errorf("POST %s/new with %v = %d", path, round, resp.StatusCode)
+			}
+		}
+	}
+	// all computed pages still render with whatever got stored
+	for _, p := range []string{"/", "/calc", "/bar", "/bar?tab=list", "/bar?tab=eval", "/retro", "/zeitplan", "/m/power", "/m/budget", "/m/staff", "/m/lineup", "/lageplan", "/m/logistics", "/m/equipment"} {
+		resp := c.do("GET", fmt.Sprintf("/e/%d%s", f.ev.ID, p), nil, nil)
+		b, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode >= 500 || strings.Contains(string(b), "Template-Fehler") {
+			t.Errorf("GET %s after hostile input = %d", p, resp.StatusCode)
+		}
+	}
+	for _, p := range []string{"/compare", "/g/contacts", "/g/locations"} {
+		if got := c.status("GET", p, nil); got >= 500 {
+			t.Errorf("GET %s = %d", p, got)
+		}
+	}
+	if n < 200 {
+		t.Fatalf("only %d requests sent", n)
+	}
+}
