@@ -40,6 +40,7 @@ type Config struct {
 	TrustProxy    bool
 	MapsOff       bool
 	WeatherOff    bool
+	MaxStorageMB  int64
 	TileURL       string
 	TileAttrib    string
 	GeocoderURL   string
@@ -58,6 +59,7 @@ func ConfigFromEnv() Config {
 		TrustProxy:    env("KOLLEKT_TRUST_PROXY", "") == "1",
 		MapsOff:       strings.EqualFold(env("KOLLEKT_MAPS", ""), "off"),
 		WeatherOff:    strings.EqualFold(env("KOLLEKT_WEATHER", ""), "off"),
+		MaxStorageMB:  int64(parseNum(env("KOLLEKT_MAX_STORAGE_MB", "5120"))),
 		TileURL:       env("KOLLEKT_TILE_URL", "https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
 		TileAttrib:    env("KOLLEKT_TILE_ATTRIBUTION", "© OpenStreetMap-Mitwirkende"),
 		GeocoderURL:   env("KOLLEKT_GEOCODER_URL", "https://nominatim.openstreetmap.org/search"),

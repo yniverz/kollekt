@@ -188,36 +188,17 @@ func (c *C) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	added, skipped := 0, 0
+	var firstErr string
 	for _, fh := range r.MultipartForm.File["file"] {
-		if existing+added >= maxFilesPerItem || fh.Size > maxUpload || fh.Size == 0 {
+		if existing+added >= maxFilesPerItem {
 			skipped++
 			continue
 		}
-		src, err := fh.Open()
-		if err != nil {
+		if err := c.saveUpload(fh, evID, m.Key, rec.ID); err != nil {
 			skipped++
-			continue
-		}
-		stored := randToken(16)
-		dst, err := os.OpenFile(filepath.Join(c.A.filesDir(), stored), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-		if err != nil {
-			src.Close()
-			skipped++
-			continue
-		}
-		n, err := io.Copy(dst, io.LimitReader(src, maxUpload+1))
-		src.Close()
-		dst.Close()
-		if err != nil || n > maxUpload {
-			_ = os.Remove(filepath.Join(c.A.filesDir(), stored))
-			skipped++
-			continue
-		}
-		_, err = c.A.db.Exec("INSERT INTO files(event_id,module,record_id,name,size,stored,created_by,created_at) VALUES(?,?,?,?,?,?,?,?)",
-			evID, m.Key, rec.ID, cleanFilename(fh.Filename), n, stored, c.User.ID, time.Now().Unix())
-		if err != nil {
-			_ = os.Remove(filepath.Join(c.A.filesDir(), stored))
-			skipped++
+			if firstErr == "" {
+				firstErr = err.Error()
+			}
 			continue
 		}
 		added++
@@ -227,7 +208,10 @@ func (c *C) handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	msg := fmt.Sprintf("%d Datei(en) angehängt.", added)
 	if skipped > 0 {
-		msg += fmt.Sprintf(" %d übersprungen (leer, über 25 MB oder mehr als %d Anhänge).", skipped, maxFilesPerItem)
+		msg += fmt.Sprintf(" %d übersprungen (leer, über 25 MB, mehr als %d Anhänge oder Speicher voll).", skipped, maxFilesPerItem)
+		if firstErr != "" {
+			msg += " " + firstErr
+		}
 	}
 	c.setFlash(msg)
 	if next == "" {
@@ -314,6 +298,13 @@ func (c *C) handleFileDelete(w http.ResponseWriter, r *http.Request) {
 func (c *C) saveUpload(fh *multipart.FileHeader, eventID int64, module string, recordID int64) error {
 	if fh.Size > maxUpload || fh.Size == 0 {
 		return errors.New("Die Datei ist leer oder größer als 25 MB.")
+	}
+	if capMB := c.A.cfg.MaxStorageMB; capMB > 0 {
+		var used int64
+		_ = c.A.db.QueryRow("SELECT COALESCE(SUM(size),0) FROM files").Scan(&used)
+		if used+fh.Size > capMB<<20 {
+			return errors.New("Der Speicher für Anhänge ist voll (Limit: KOLLEKT_MAX_STORAGE_MB).")
+		}
 	}
 	src, err := fh.Open()
 	if err != nil {

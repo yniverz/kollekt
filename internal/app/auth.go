@@ -65,6 +65,9 @@ func randToken(n int) string {
 	return hex.EncodeToString(b)
 }
 
+// bcryptCost is lowered in tests only.
+var bcryptCost = 11
+
 // dummyHash keeps login timing constant for unknown usernames.
 var dummyHash, _ = bcrypt.GenerateFromPassword([]byte("kollekt-dummy"), 11)
 
@@ -88,7 +91,7 @@ func checkPassword(pw string) string {
 }
 
 func hashPW(pw string) (string, error) {
-	b, err := bcrypt.GenerateFromPassword([]byte(pw), 11)
+	b, err := bcrypt.GenerateFromPassword([]byte(pw), bcryptCost)
 	return string(b), err
 }
 

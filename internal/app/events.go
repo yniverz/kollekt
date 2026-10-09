@@ -309,9 +309,10 @@ func (a *App) teamPage(c *C) {
 		areas = append(areas, RefOpt{itoa(ar.ID), ar.S("name"), false})
 	}
 	type MemView struct {
-		M     *Member
-		Areas string
-		Sel   map[int64]bool
+		M       *Member
+		Areas   string
+		Sel     map[int64]bool
+		NoAreas bool // an area-restricted role without any area sees nothing
 	}
 	var mv []MemView
 	for _, m := range members {
@@ -323,7 +324,7 @@ func (a *App) teamPage(c *C) {
 				names = append(names, t)
 			}
 		}
-		mv = append(mv, MemView{m, strings.Join(names, ", "), sel})
+		mv = append(mv, MemView{m, strings.Join(names, ", "), sel, m.Role != nil && m.Role.AreaScoped && len(names) == 0})
 	}
 	sort.Slice(mv, func(i, j int) bool {
 		return mv[i].M.User != nil && mv[j].M.User != nil && mv[i].M.User.Name < mv[j].M.User.Name

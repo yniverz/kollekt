@@ -6,6 +6,7 @@ Sicherheitslücken bitte **nicht** als öffentliches Issue melden, sondern über
 
 * Passwörter werden mit bcrypt gespeichert (mindestens 10 Zeichen), Sitzungs-Tokens nur als SHA-256-Hash.
 * Sitzungs-Cookie `HttpOnly`, `SameSite=Lax`, `Secure` hinter HTTPS. Alle schreibenden Anfragen verlangen ein CSRF-Token und eine passende Herkunft.
+* Die Ersteinrichtung verlangt einen Code aus dem Container-Log, damit niemand eine frisch deployte Instanz übernehmen kann.
 * Anmeldeversuche sind begrenzt (pro Konto und IP).
 * Jede Abfrage prüft Event-Mitgliedschaft, Modulrecht und Bereichszuordnung auf dem Server. Ausgeblendete Felder werden nicht ausgeliefert.
 * Strikte Content-Security-Policy ohne Inline-Skripte, `X-Frame-Options: DENY`, `nosniff`.
@@ -14,6 +15,10 @@ Sicherheitslücken bitte **nicht** als öffentliches Issue melden, sondern über
 * Kartenfunktionen sprechen nur die konfigurierten Kartendienste an (CSP-Whitelist) und lassen sich mit `KOLLEKT_MAPS=off` komplett abschalten. Plan-Bilder werden nur ausgeliefert, wenn sie wirklich PNG, JPEG, GIF oder WebP sind (kein SVG), mit `nosniff` und `sandbox`-CSP.
 * Anhänge liegen unter zufälligen Namen im Datenordner und werden nur als Download (`attachment`, `application/octet-stream`) ausgeliefert.
 * Datenordner und Datenbank sind nur für den Prozessbenutzer lesbar. Der Container läuft ohne Root-Rechte.
+
+## Getestet
+
+Ein Integrationstest startet den echten Server und prüft für jede mitgelieferte Rolle und jedes Modul Lesen und Schreiben, die Beschränkung auf eigene Bereiche, die Trennung zwischen Events, versteckte Kostenfelder, CSRF-Schutz, Dateizugriff und den Kalender-Link. Er läuft bei jedem Push.
 
 ## Betrieb
 

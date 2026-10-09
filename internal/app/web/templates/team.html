@@ -6,7 +6,7 @@
   {{range .Members}}{{if .M.User}}
     <tr><td class="title">{{.M.User.Name}}<div class="muted small">{{.M.User.Username}}</div></td>
     <td>{{if .M.Role}}{{.M.Role.Name}}{{if .M.Role.AreaScoped}} <span class="badge b-yellow">nur eigene Bereiche</span>{{end}}{{end}}</td>
-    <td>{{if .Areas}}{{.Areas}}{{else}}<span class="muted">–</span>{{end}}</td>
+    <td>{{if .Areas}}{{.Areas}}{{else if .NoAreas}}<span class="badge b-red">Keine Bereiche zugewiesen: sieht noch nichts</span>{{else}}<span class="muted">–</span>{{end}}</td>
     <td style="text-align:right" class="nowrap">
       <details style="display:inline-block;text-align:left"><summary class="btn sm">Ändern</summary>
       <form method="post" action="/e/{{$.Event.ID}}/team" class="panel" style="position:absolute;z-index:5;min-width:300px;margin-top:6px">

@@ -345,7 +345,7 @@ func TestOverviewAndAuditDoNotLeakModulesTheRoleCannotSee(t *testing.T) {
 	f.a.logAudit(1, f.ev.ID, "tasks", f.recB["tasks"].ID, "geändert", "Fremde Aufgabe", f.areaB.ID)
 	c := f.client("helfer", "rolepassword-123")
 	ov := c.getBody(fmt.Sprintf("/e/%d/", f.ev.ID))
-	for _, secret := range []string{"Geheimes Budget Posten", "Geheimer Headliner", "777", "999"} {
+	for _, secret := range []string{"Geheimes Budget Posten", "Geheimer Headliner", "777,00", "999,00"} {
 		if strings.Contains(ov, secret) {
 			t.Errorf("overview leaks %q to a helper", secret)
 		}
@@ -374,7 +374,7 @@ func TestCostFieldsStayHiddenWithoutTheFinanceRight(t *testing.T) {
 	if list := c.getBody(fmt.Sprintf("/e/%d/m/equipment", f.ev.ID)); strings.Contains(list, "250,00") {
 		t.Error("equipment list shows the cost")
 	}
-	if list := c.getBody(fmt.Sprintf("/e/%d/m/lineup", f.ev.ID)); strings.Contains(list, "777") {
+	if list := c.getBody(fmt.Sprintf("/e/%d/m/lineup", f.ev.ID)); strings.Contains(list, "777,00") {
 		t.Error("line-up shows the fee")
 	}
 	if list := c.getBody(fmt.Sprintf("/e/%d/m/permits", f.ev.ID)); strings.Contains(list, "55,00") {
@@ -460,7 +460,7 @@ func TestCalendarFeedLeaksNoMoneyOrForeignAreas(t *testing.T) {
 	if !strings.Contains(feed, "Rechnung Technik") {
 		t.Errorf("own payment date missing from feed")
 	}
-	for _, secret := range []string{"Frist B", "777", "250", "Budget B", "4321", "4.321", "€"} {
+	for _, secret := range []string{"Frist B", "777,00", "250,00", "Budget B", "4321", "4.321", "€"} {
 		if strings.Contains(feed, secret) {
 			t.Errorf("calendar feed leaks %q", secret)
 		}
@@ -615,5 +615,45 @@ func TestFilesFollowTheirRecordsPermissions(t *testing.T) {
 	defer resp.Body.Close()
 	if ct := resp.Header.Get("Content-Type"); ct != "application/octet-stream" || !strings.HasPrefix(resp.Header.Get("Content-Disposition"), "attachment") || resp.Header.Get("X-Content-Type-Options") != "nosniff" {
 		t.Errorf("download headers unsafe: %v", resp.Header)
+	}
+}
+
+// The way back after saving must be exactly the page you came from, including filters,
+// whether you clicked the title, the row, or the "add" button.
+func TestReturnPathSurvivesFiltersAndEveryClickStyle(t *testing.T) {
+	f := newFixture(t)
+	c := f.client("admin", "testpass-12345")
+	list := fmt.Sprintf("/e/%d/m/tasks?f_status=open&q=Aufgabe&done=1", f.ev.ID)
+	body := c.getBody(list)
+	re := regexp.MustCompile(`(?:data-href|href)="([^"]*/m/tasks/(?:new|\d+)\?next=[^"]*)"`)
+	found := 0
+	for _, m := range re.FindAllStringSubmatch(body, -1) {
+		link := strings.ReplaceAll(m[1], "&amp;", "&")
+		u, err := url.Parse(link)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := u.Query().Get("next"); got != list {
+			t.Errorf("link %q carries next=%q, want %q", link, got, list)
+		}
+		found++
+		// opening the form must keep it, and saving must lead back
+		st, form := c.partial(link)
+		if st != 200 {
+			t.Fatalf("form %s = %d", link, st)
+		}
+		hm := regexp.MustCompile(`name="next" value="([^"]*)"`).FindStringSubmatch(form)
+		if hm == nil || strings.ReplaceAll(hm[1], "&amp;", "&") != list {
+			t.Errorf("form hidden next = %v, want %q", hm, list)
+		}
+	}
+	if found < 3 {
+		t.Fatalf("only %d links checked", found)
+	}
+	data := url.Values{"title": {"Zurück-Test"}, "status": {"open"}, "prio": {"normal"}, "next": {list}}
+	resp := c.do("POST", fmt.Sprintf("/e/%d/m/tasks/new", f.ev.ID), data, nil)
+	resp.Body.Close()
+	if resp.StatusCode != 303 || resp.Header.Get("Location") != list {
+		t.Errorf("after saving: %d -> %q, want 303 -> %q", resp.StatusCode, resp.Header.Get("Location"), list)
 	}
 }

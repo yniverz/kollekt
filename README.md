@@ -65,6 +65,7 @@ Danach `http://localhost:8080` öffnen. Beim ersten Aufruf erscheint die Einrich
 | `KOLLEKT_ADMIN_USER` / `KOLLEKT_ADMIN_PASSWORD` | leer | Admin-Konto beim ersten Start anlegen (Passwort 10 bis 72 Zeichen) |
 | `KOLLEKT_TRUST_PROXY` | leer | `1` übernimmt die Client-IP aus `X-Forwarded-For` (nur hinter eigenem Proxy, sonst fälschbar) |
 | `KOLLEKT_SOURCE_URL` | GitHub-Repo | Ziel des „Quellcode“-Links in der Fußzeile. Wer eine geänderte Version betreibt, muss hier auf den eigenen Quellcode verweisen (AGPL § 13) |
+| `KOLLEKT_MAX_STORAGE_MB` | `5120` | Obergrenze für alle Anhänge zusammen in MB (0 = unbegrenzt) |
 | `KOLLEKT_WEATHER` | an | `off` schaltet die Wetterdaten ab. Der Server fragt dann Open-Meteo nicht mehr ab |
 | `KOLLEKT_MAPS` | an | `off` schaltet alle Funktionen mit externen Kartendiensten ab (Pins, Kartenpläne, Adresssuche). Bildpläne funktionieren weiter |
 | `KOLLEKT_TILE_URL` | OpenStreetMap | Kachelserver, z. B. ein eigener oder ein Anbieter mit Vertrag. Platzhalter `{z}/{x}/{y}` und optional `{s}` |

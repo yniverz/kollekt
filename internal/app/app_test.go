@@ -5,6 +5,9 @@ package app
 
 import (
 	"encoding/json"
+	"os"
+
+	"golang.org/x/crypto/bcrypt"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +15,11 @@ import (
 	"strings"
 	"testing"
 )
+
+func TestMain(m *testing.M) {
+	bcryptCost = bcrypt.MinCost // tests create many users and log in often
+	os.Exit(m.Run())
+}
 
 func testApp(t *testing.T) (*App, *Event, *C) {
 	t.Helper()
