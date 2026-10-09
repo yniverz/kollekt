@@ -11,6 +11,25 @@
     if (!enabled || !tileURL) return;
     L.tileLayer(tileURL, { maxZoom: 19, attribution: attrib || '' }).addTo(map);
   }
+  // Plain wheel scrolls the page, Cmd/Ctrl + wheel (and trackpad pinch) zooms the map.
+  var isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
+  function wheelGuard(map) {
+    var box = map.getContainer();
+    map.options.wheelPxPerZoomLevel = 90;
+    var hint = el('div', 'kmap-hint', (isMac ? '⌘' : 'Strg') + ' + Scrollen zum Zoomen');
+    box.appendChild(hint);
+    var timer = null;
+    // capture phase on the parent: runs before Leaflet's own wheel handler on the map element
+    box.parentNode.addEventListener('wheel', function (e) {
+      if (!box.contains(e.target)) return;
+      if (e.ctrlKey || e.metaKey) { hint.classList.remove('on'); return; }
+      e.stopPropagation(); // Leaflet never sees it, the page keeps scrolling
+      hint.classList.add('on');
+      clearTimeout(timer);
+      timer = setTimeout(function () { hint.classList.remove('on'); }, 1200);
+    }, { capture: true, passive: true });
+  }
+
   function el(tag, cls, text) {
     var e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -25,7 +44,8 @@
     try { pts = JSON.parse(host.getAttribute('data-points') || '[]') || []; } catch (e) {}
     host.style.height = (host.getAttribute('data-height') || 300) + 'px';
     if (!enabled) { host.classList.add('kmap-off'); host.textContent = 'Karten sind in dieser Installation deaktiviert.'; return; }
-    var map = L.map(host, { scrollWheelZoom: false });
+    var map = L.map(host);
+    wheelGuard(map);
     baseLayer(map);
     var bounds = [];
     pts.forEach(function (p) {
@@ -40,8 +60,6 @@
     if (bounds.length === 1) map.setView(bounds[0], 15);
     else if (bounds.length) map.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
     else map.setView([49.0069, 8.4037], 11);
-    host.addEventListener('mouseenter', function () { map.scrollWheelZoom.enable(); });
-    host.addEventListener('mouseleave', function () { map.scrollWheelZoom.disable(); });
     setTimeout(function () { map.invalidateSize(); }, 80);
   }
 
@@ -68,7 +86,8 @@
     function fieldVal(n) { var f = form && form.querySelector('[name="' + n + '"]'); return f ? f.value.trim() : ''; }
     q.value = [fieldVal('address'), fieldVal('city')].filter(Boolean).join(', ');
 
-    var map = L.map(mapEl, { scrollWheelZoom: false }).setView([49.0069, 8.4037], 12);
+    var map = L.map(mapEl).setView([49.0069, 8.4037], 12);
+    wheelGuard(map);
     baseLayer(map);
     var marker = null;
     function show() {
@@ -111,7 +130,7 @@
   }
 
   window.KMaps = {
-    enabled: enabled, baseLayer: baseLayer, el: el,
+    enabled: enabled, baseLayer: baseLayer, el: el, wheelGuard: wheelGuard,
     init: function (scope) {
       scope.querySelectorAll('.kmap:not([data-ready])').forEach(initPins);
       scope.querySelectorAll('.kgeo:not([data-ready])').forEach(initGeo);

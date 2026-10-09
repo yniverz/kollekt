@@ -328,10 +328,7 @@
     }
   }
   function go() {
-    map.scrollWheelZoom.disable(); // do not hijack page scrolling; click into the map to zoom with the wheel
-    var mEl = map.getContainer();
-    mEl.addEventListener('click', function () { map.scrollWheelZoom.enable(); });
-    mEl.addEventListener('mouseleave', function () { map.scrollWheelZoom.disable(); });
+    window.KMaps.wheelGuard(map); // page scrolls normally, Cmd/Ctrl + wheel zooms
     D.items.forEach(function (it) { if (typeof it.geom === 'string') it.geom = JSON.parse(it.geom); });
     D.items.forEach(drawItem);
     map.on('click', onMapClick); map.on('mousemove', onMove); map.on('dblclick', function () { if (draft && (tool === 'poly' || tool === 'line')) finishDraft(); });
