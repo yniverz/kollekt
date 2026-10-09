@@ -393,6 +393,38 @@ func TestPowerTreeLoadsAndOverload(t *testing.T) {
 	}
 }
 
+func TestPowerNestedLoadsCountForTheDistributor(t *testing.T) {
+	a, e, c := testApp(t)
+	e.Modules = []string{"power"}
+	mk := func(d map[string]string) int64 {
+		r := &Rec{EventID: e.ID, Module: "power", D: d}
+		_ = a.saveRec(r)
+		return r.ID
+	}
+	src := mk(map[string]string{"name": "Aggregat", "kind": "source", "watts": "5000"})
+	dist := mk(map[string]string{"name": "Verteiler", "kind": "dist", "parent": itoa(src)})
+	l1 := mk(map[string]string{"name": "Lampe 1", "kind": "load", "parent": itoa(dist), "watts": "100"})
+	l2 := mk(map[string]string{"name": "Lampe 2", "kind": "load", "parent": itoa(l1), "watts": "50"})
+	mk(map[string]string{"name": "Lampe 3", "kind": "load", "parent": itoa(l2), "watts": "25", "qty": "2", "simult": "50"}) // 25 W
+	v := c.powerTree()
+	byName := map[string]*PowerRow{}
+	for _, r := range v.Rows {
+		byName[r.R.S("name")] = r
+	}
+	if !near(byName["Verteiler"].Load, 175) || !near(byName["Aggregat"].Load, 175) {
+		t.Fatalf("distributor %v source %v, want 175", byName["Verteiler"].Load, byName["Aggregat"].Load)
+	}
+	if !near(byName["Lampe 1"].Load, 175) || !near(byName["Lampe 2"].Load, 75) || !near(byName["Lampe 3"].Load, 25) {
+		t.Fatalf("subtree loads: %v %v %v", byName["Lampe 1"].Load, byName["Lampe 2"].Load, byName["Lampe 3"].Load)
+	}
+	if !near(v.Total, 175) { // not 175+75+25: nothing is counted twice
+		t.Fatalf("total = %v, want 175", v.Total)
+	}
+	if byName["Lampe 2"].Level != 3 || byName["Lampe 3"].Level != 4 {
+		t.Fatal("indentation levels wrong")
+	}
+}
+
 func TestPowerCycleDoesNotHang(t *testing.T) {
 	a, e, c := testApp(t)
 	a1 := &Rec{EventID: e.ID, Module: "power", D: map[string]string{"name": "A", "kind": "dist"}}

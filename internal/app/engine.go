@@ -858,6 +858,19 @@ func (c *C) collect(m *Module, rec *Rec) (map[string]string, map[string]string) 
 			}
 		}
 	}
+	if m.Key == "power" && rec != nil { // a post must not hang below itself or one of its descendants
+		for cur, i := int64(parseNum(vals["parent"])), 0; cur != 0 && i < 30; i++ {
+			if cur == rec.ID {
+				errs["parent"] = "Das würde einen Kreis ergeben: der Posten hinge unter sich selbst."
+				break
+			}
+			pr := c.A.rec(cur)
+			if pr == nil {
+				break
+			}
+			cur = pr.I("parent")
+		}
+	}
 	if st, en := vals["start"], vals["end"]; st != "" && en != "" {
 		if rolled, changed := rollEnd(st, en); changed {
 			vals["end"] = rolled // 20:00 to 01:00 means 01:00 the next day

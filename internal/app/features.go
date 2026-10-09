@@ -142,6 +142,7 @@ type PowerRow struct {
 	Site      string
 	AddURL    string
 	Pad       int
+	Chained   bool // a load with further posts hanging below it
 }
 
 type PowerView struct {
@@ -188,23 +189,29 @@ func (c *C) powerTree() *PowerView {
 			children[p] = append(children[p], r)
 		}
 	}
+	// own is what a post draws itself: only loads have a connected load
+	own := func(r *Rec) float64 {
+		if r.S("kind") != "load" && r.S("kind") != "" {
+			return 0
+		}
+		q := r.N("qty")
+		if r.S("qty") == "" {
+			q = 1
+		}
+		s := r.N("simult")
+		if r.S("simult") == "" {
+			s = 100
+		}
+		return r.N("watts") * q * s / 100
+	}
+	// loadOf is the load of a post including everything hanging below it, at any depth
+	// (a lamp chained to another lamp counts for the distributor above both).
 	var loadOf func(r *Rec, depth int) float64
 	loadOf = func(r *Rec, depth int) float64 {
 		if depth > 12 {
-			return 0
+			return own(r)
 		}
-		if r.S("kind") == "load" || r.S("kind") == "" {
-			q := r.N("qty")
-			if r.S("qty") == "" {
-				q = 1
-			}
-			s := r.N("simult")
-			if r.S("simult") == "" {
-				s = 100
-			}
-			return r.N("watts") * q * s / 100
-		}
-		t := 0.0
+		t := own(r)
 		for _, ch := range children[r.ID] {
 			t += loadOf(ch, depth+1)
 		}
@@ -221,6 +228,7 @@ func (c *C) powerTree() *PowerView {
 		seen[r.ID] = true
 		row := &PowerRow{R: r, Level: level, Pad: level * 22, Kind: r.S("kind"), Load: loadOf(r, 0), Own: r.N("watts")}
 		row.KindLabel, _ = optLabel(kindOpts, r.S("kind"))
+		row.Chained = (row.Kind == "load" || row.Kind == "") && row.Load > own(r)+0.001
 		row.Site = c.RefTitle("site_items", r.I("site"))
 		row.AddURL = fmt.Sprintf("%s/new?parent=%d&area=%d&kind=load&next=%s", v.Base, r.ID, r.I("area"), v.Next)
 		if row.Kind == "source" || row.Kind == "dist" {
@@ -286,9 +294,7 @@ func (c *C) powerTree() *PowerView {
 		}
 	}
 	for _, r := range recs {
-		if r.S("kind") == "load" || r.S("kind") == "" {
-			v.Total += loadOf(r, 0)
-		}
+		v.Total += own(r) // every post counted once, wherever it hangs
 	}
 	v.Needed = v.Total / (1 - lim.PowerReserve/100)
 	v.KVA = v.Needed / cosPhi / 1000
