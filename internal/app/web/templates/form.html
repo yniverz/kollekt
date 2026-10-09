@@ -1,0 +1,56 @@
+{{define "partial"}}
+<div class="drawer-in">
+  <div class="drawer-head"><h2>{{.Title}}</h2><button type="button" class="btn ghost sm" data-close aria-label="Schließen">{{icon "x"}}</button></div>
+  {{template "formbody" .}}
+</div>
+{{end}}
+
+{{define "content"}}
+<div class="page-head"><div><h1>{{.Title}}</h1></div></div>
+<div class="panel" style="max-width:640px">{{template "formbody" .}}</div>
+{{end}}
+
+{{define "formbody"}}
+{{if .Fields}}{{$any := false}}{{range .Fields}}{{if .Err}}{{$any = true}}{{end}}{{end}}{{if $any}}<div class="errbox" role="alert">Bitte prüfe die markierten Felder.</div>{{end}}{{end}}
+<form method="post" action="{{.Action}}" id="mainform">
+  <input type="hidden" name="_csrf" value="{{.CSRF}}">
+  <input type="hidden" name="next" value="{{.Next}}">
+  <div class="form-grid">
+  {{range .Fields}}{{if .Show}}{{template "field" .}}{{end}}{{end}}
+  {{if .MultiCreate}}<div class="field"><label class="lbl" for="f_count">Anzahl Plätze</label><input id="f_count" type="number" name="_count" min="1" max="60" value="1"><div class="help">Legt mehrere gleiche Schichten auf einmal an.</div></div>{{end}}
+  </div>
+  <div class="form-actions">
+    <button class="btn primary" type="submit">Speichern</button>
+    <button type="button" class="btn ghost" data-close>Abbrechen</button>
+    <span class="sp"></span>
+    {{if .CanDelete}}<button class="btn danger" type="submit" form="delform" data-confirm="Wirklich löschen?">{{icon "trash"}} Löschen</button>{{end}}
+  </div>
+</form>
+{{if .CanDelete}}<form method="post" action="{{.DeleteURL}}" id="delform"><input type="hidden" name="_csrf" value="{{.CSRF}}"><input type="hidden" name="next" value="{{.Next}}"></form>{{end}}
+{{end}}
+
+{{define "field"}}
+{{$f := .F}}
+<div class="field {{if $f.Wide}}wide{{end}} {{if .Err}}has-err{{end}} {{if eq (printf "%s" $f.Type) "textarea"}}wide{{end}} {{if eq (printf "%s" $f.Type) "recipe"}}wide{{end}}">
+  {{if eq (printf "%s" $f.Type) "bool"}}
+    <label class="checkrow"><input type="checkbox" name="{{$f.Key}}" value="1" {{if eq .Value "1"}}checked{{end}}> <span><b>{{$f.Label}}</b></span></label>
+  {{else}}
+    <label class="lbl" for="f_{{$f.Key}}">{{$f.Label}}{{if $f.Required}} *{{end}}</label>
+    {{if eq (printf "%s" $f.Type) "textarea"}}<textarea id="f_{{$f.Key}}" name="{{$f.Key}}">{{.Value}}</textarea>
+    {{else if eq (printf "%s" $f.Type) "select"}}<select id="f_{{$f.Key}}" name="{{$f.Key}}">{{if not $f.Required}}<option value=""></option>{{end}}{{range $f.Opts}}<option value="{{.V}}" {{if eq .V $.Value}}selected{{end}}>{{.L}}</option>{{end}}</select>
+    {{else if eq (printf "%s" $f.Type) "ref"}}<select id="f_{{$f.Key}}" name="{{$f.Key}}"><option value="">{{if $f.Required}}Bitte wählen …{{else}}–{{end}}</option>{{range .Opts}}<option value="{{.ID}}" {{if .Sel}}selected{{end}}>{{.Title}}</option>{{end}}</select>
+    {{else if eq (printf "%s" $f.Type) "date"}}<input id="f_{{$f.Key}}" type="date" name="{{$f.Key}}" value="{{.Value}}">
+    {{else if eq (printf "%s" $f.Type) "datetime"}}<input id="f_{{$f.Key}}" type="datetime-local" name="{{$f.Key}}" value="{{.Value}}">
+    {{else if eq (printf "%s" $f.Type) "color"}}<input id="f_{{$f.Key}}" type="color" name="{{$f.Key}}" value="{{if .Value}}{{.Value}}{{else}}#8a8f98{{end}}">
+    {{else if eq (printf "%s" $f.Type) "recipe"}}
+      <div class="recipe" data-items="{{.Items}}"><input type="hidden" name="{{$f.Key}}" value="{{.Value}}"><div class="rlines"></div><button type="button" class="btn sm radd">{{icon "plus"}} Zutat</button></div>
+    {{else if or (eq (printf "%s" $f.Type) "number") (eq (printf "%s" $f.Type) "money") (eq (printf "%s" $f.Type) "percent")}}
+      <div class="inp-suffix"><input id="f_{{$f.Key}}" type="number" step="any" inputmode="decimal" name="{{$f.Key}}" value="{{.Value}}">{{if $f.Suffix}}<span>{{$f.Suffix}}</span>{{end}}</div>
+    {{else}}<input id="f_{{$f.Key}}" type="text" name="{{$f.Key}}" value="{{.Value}}" {{if .Suggest}}list="dl_{{$f.Key}}"{{end}} {{if eq (printf "%s" $f.Type) "url"}}inputmode="url" placeholder="https://"{{end}}>
+      {{if .Suggest}}<datalist id="dl_{{$f.Key}}">{{range .Suggest}}<option value="{{.}}">{{end}}</datalist>{{end}}
+    {{end}}
+    {{if $f.Help}}<div class="help">{{$f.Help}}</div>{{end}}
+  {{end}}
+  {{if .Err}}<div class="err">{{.Err}}</div>{{end}}
+</div>
+{{end}}

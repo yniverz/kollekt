@@ -1,0 +1,50 @@
+{{define "base"}}<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+{{if .CSRF}}<meta name="csrf" content="{{.CSRF}}">{{end}}
+<title>{{if .Title}}{{.Title}} · {{end}}Kollekt</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%23b5441f'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='21' font-weight='700' text-anchor='middle' fill='%23fff8f0'%3EK%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/static/app.css?v=1">
+</head>
+<body>
+{{if .User}}
+<header class="top">
+  <a class="brand" href="/">Kollekt<span>.</span></a>
+  <nav class="gnav" aria-label="Hauptnavigation">
+    <a href="/" class="{{if or (eq .Path "/") (hasPrefix .Path "/e/") (hasPrefix .Path "/events")}}on{{end}}">{{icon "cal"}} Events</a>
+    <a href="/g/contacts" class="{{if hasPrefix .Path "/g/contacts"}}on{{end}}">{{icon "book"}} Kontakte</a>
+    <a href="/g/locations" class="{{if hasPrefix .Path "/g/locations"}}on{{end}}">{{icon "pin"}} Locations</a>
+    <a href="/g/articles" class="{{if hasPrefix .Path "/g/articles"}}on{{end}}">{{icon "tag"}} Artikelstamm</a>
+    {{if .User.IsAdmin}}<a href="/admin/users" class="{{if hasPrefix .Path "/admin"}}on{{end}}">{{icon "sliders"}} Verwaltung</a>{{end}}
+  </nav>
+  <div class="usermenu">
+    <a class="uitem" href="/account">{{icon "user"}} <span class="hide-m">{{.User.Name}}</span></a>
+    <form method="post" action="/logout"><input type="hidden" name="_csrf" value="{{.CSRF}}"><button class="uitem" title="Abmelden">{{icon "logout"}}</button></form>
+  </div>
+</header>
+{{end}}
+<div class="shell {{if .Event}}has-side{{end}}">
+{{if .Event}}
+  <nav class="side" aria-label="Event-Navigation">
+    <div class="side-head">
+      <a class="t" href="/e/{{.Event.ID}}/">{{.Event.Name}}</a>
+      <div class="s">{{statusBadge .Event.Status}}{{if .Event.Start}}<span>{{date .Event.Start}}</span>{{end}}</div>
+    </div>
+    {{range .Nav}}<a class="item {{if .Active}}on{{end}}" href="{{.URL}}">{{icon .Icon}} {{.Label}}</a>{{end}}
+    {{if .CanSettings}}<div class="sep"></div>
+    <a class="item {{if hasSuffix .Path "/team"}}on{{end}}" href="/e/{{.Event.ID}}/team">{{icon "users"}} Team &amp; Rechte</a>
+    <a class="item {{if hasSuffix .Path "/settings"}}on{{end}}" href="/e/{{.Event.ID}}/settings">{{icon "sliders"}} Einstellungen</a>{{end}}
+  </nav>
+{{end}}
+  <main class="main" id="main">
+    {{if .Flash}}<div class="flash" role="status"><span>{{.Flash}}</span></div>{{end}}
+    {{template "content" .}}
+  </main>
+</div>
+<dialog id="drawer" class="drawer" aria-label="Bearbeiten"></dialog>
+<script src="/static/app.js?v=1"></script>
+</body>
+</html>{{end}}

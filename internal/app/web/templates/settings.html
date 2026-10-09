@@ -1,0 +1,48 @@
+{{define "content"}}
+<div class="page-head"><div><h1>Event-Einstellungen</h1><p class="sub">Stammdaten, aktive Module und Aufbewahrung dieses Events.</p></div></div>
+{{if .Error}}<div class="errbox">{{.Error}}</div>{{end}}
+<form method="post" action="/e/{{.Event.ID}}/settings" class="panel">
+  <input type="hidden" name="_csrf" value="{{.CSRF}}">
+  <h2>Allgemein</h2>
+  <div class="form-grid">
+    <div class="field wide"><label class="lbl" for="name">Name</label><input id="name" name="name" value="{{.Form.name}}" required></div>
+    <div class="field"><label class="lbl" for="status">Status</label><select id="status" name="status">{{range .Statuses}}<option value="{{.V}}" {{if eq .V $.Form.status}}selected{{end}}>{{.L}}</option>{{end}}</select></div>
+    <div class="field"><label class="lbl" for="loc">Location</label><select id="loc" name="location"><option value="">Noch offen</option>{{range .Locations}}<option value="{{.ID}}" {{if .Sel}}selected{{end}}>{{.Title}}</option>{{end}}</select></div>
+    <div class="field"><label class="lbl" for="start">Beginn</label><input id="start" type="datetime-local" name="start" value="{{.Form.start}}"></div>
+    <div class="field"><label class="lbl" for="end">Ende</label><input id="end" type="datetime-local" name="end" value="{{.Form.end}}"></div>
+    <div class="field wide"><label class="lbl" for="desc">Beschreibung</label><textarea id="desc" name="description">{{.Form.description}}</textarea></div>
+  </div>
+  <h2 style="margin-top:8px">Module</h2>
+  <p class="muted small">Nur aktive Module erscheinen in der Navigation. Daten deaktivierter Module bleiben erhalten.</p>
+  <div style="columns:2 280px;column-gap:24px">
+    {{range .Mods}}<label class="checkrow" style="break-inside:avoid;align-items:flex-start"><input type="checkbox" name="mod_{{.M.Key}}" {{if .On}}checked{{end}} {{if .Locked}}disabled{{end}}> <span><b>{{.M.Name}}</b><br><span class="muted small">{{.M.Desc}}</span></span></label>{{end}}
+  </div>
+  <div class="form-actions"><button class="btn primary">Speichern</button></div>
+</form>
+
+<div class="grid2">
+  <form method="post" action="/e/{{.Event.ID}}/duplicate" class="panel">
+    <input type="hidden" name="_csrf" value="{{.CSRF}}">
+    <h2>Event duplizieren</h2>
+    <p class="muted small">Übernimmt Struktur, Zuständigkeiten und Beträge. Termine, Stati und Zahlungen werden zurückgesetzt.</p>
+    <div class="field"><label class="lbl" for="dn">Name der Kopie</label><input id="dn" name="name" placeholder="{{.Event.Name}} (Kopie)"></div>
+    <button class="btn">{{icon "copy"}} Duplizieren</button>
+  </form>
+  <form method="post" action="/e/{{.Event.ID}}/save-template" class="panel">
+    <input type="hidden" name="_csrf" value="{{.CSRF}}">
+    <h2>Als Vorlage speichern</h2>
+    <div class="field"><label class="lbl" for="tn">Name der Vorlage</label><input id="tn" name="name" placeholder="{{.Event.Name}} (Vorlage)"></div>
+    <label class="checkrow"><input type="checkbox" name="amounts" checked> Beträge übernehmen</label>
+    <label class="checkrow"><input type="checkbox" name="people"> Kontakte und Zuständigkeiten übernehmen</label>
+    <button class="btn" style="margin-top:8px">Vorlage speichern</button>
+  </form>
+</div>
+
+<form method="post" action="/e/{{.Event.ID}}/delete" class="panel" style="margin-top:18px;border-color:var(--bad)">
+  <input type="hidden" name="_csrf" value="{{.CSRF}}">
+  <h2 class="bad">Event löschen</h2>
+  <p class="muted small">Löscht das Event mit allen Daten unwiderruflich. Zur Bestätigung den Eventnamen eintippen.</p>
+  <div class="field" style="max-width:420px"><input name="confirm" placeholder="{{.Event.Name}}" aria-label="Eventname zur Bestätigung" autocomplete="off"></div>
+  <button class="btn danger">{{icon "trash"}} Endgültig löschen</button>
+</form>
+{{end}}

@@ -1,0 +1,21 @@
+{{define "content"}}
+<div class="page-head"><div><h1>{{.Title}}</h1></div><div class="actions"><a class="btn" href="/admin/roles">Zurück</a></div></div>
+{{if .Error}}<div class="errbox">{{.Error}}</div>{{end}}
+<form method="post" action="/admin/roles/{{if .R.ID}}{{.R.ID}}{{else}}new{{end}}" class="panel">
+  <input type="hidden" name="_csrf" value="{{.CSRF}}">
+  <div class="form-grid">
+    <div class="field"><label class="lbl" for="n">Name</label><input id="n" name="name" value="{{.R.Name}}" required></div>
+    <div class="field"><label class="lbl" for="d">Beschreibung</label><input id="d" name="description" value="{{.R.Description}}"></div>
+  </div>
+  <label class="checkrow" style="align-items:flex-start"><input type="checkbox" name="area_scoped" {{if .R.AreaScoped}}checked{{end}}> <span><b>Nur eigene Bereiche</b><br><span class="muted small">Aufgaben, Budget, Personal, Material und Notizen sind nur in den Bereichen sichtbar, für die die Person im Event zuständig ist. Gut für Bar-Leitung und Helfer.</span></span></label>
+  <h2 style="margin:18px 0 6px">Rechte pro Modul</h2>
+  <table class="permgrid">
+  {{range .Rows}}<tr><td style="width:36%"><b>{{.Def.Label}}</b><div class="muted small">{{.Def.Desc}}</div></td>
+  <td>{{$k := .Def.Key}}{{$l := .Level}}
+    <label><input type="radio" name="perm_{{$k}}" value="0" {{if eq $l 0}}checked{{end}}> Kein Zugriff</label>
+    <label><input type="radio" name="perm_{{$k}}" value="1" {{if eq $l 1}}checked{{end}}> Lesen</label>
+    <label><input type="radio" name="perm_{{$k}}" value="2" {{if eq $l 2}}checked{{end}}> Bearbeiten</label></td></tr>{{end}}
+  </table>
+  <div class="form-actions"><button class="btn primary">Speichern</button><a class="btn ghost" href="/admin/roles">Abbrechen</a></div>
+</form>
+{{end}}

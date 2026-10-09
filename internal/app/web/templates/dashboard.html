@@ -1,0 +1,44 @@
+{{define "content"}}
+<div class="page-head">
+  <div><h1>Events</h1><p class="sub">Alles, was ansteht, und alles, was war.</p></div>
+  <div class="actions">{{if .CanCreate}}<a class="btn primary" href="/events/new">{{icon "plus"}} Neues Event</a>{{end}}</div>
+</div>
+
+{{if .Mine}}
+<div class="panel">
+  <h2>Meine offenen Aufgaben</h2>
+  <ul class="alist">
+    {{range .Mine}}<li><span class="when {{if .Late}}late{{end}}">{{if .Due}}{{date .Due}}{{else}}ohne Frist{{end}}</span><span><a href="{{.Link}}">{{.Title}}</a> <span class="muted">· {{.Event}}</span></span></li>{{end}}
+  </ul>
+</div>
+{{end}}
+
+
+<div class="panel flat">
+  <h2>Anstehend</h2>
+  {{if .Upcoming}}{{template "eventtable" .Upcoming}}{{else}}<div class="empty">Keine anstehenden Events.{{if .CanCreate}} <a href="/events/new">Lege das erste an.</a>{{end}}</div>{{end}}
+</div>
+{{if .Past}}
+<div class="panel flat">
+  <h2>Vergangen &amp; abgeschlossen</h2>
+  {{template "eventtable" .Past}}
+</div>
+{{end}}
+{{end}}
+
+{{define "eventtable"}}
+<div class="tblwrap"><table class="tbl">
+  <thead><tr><th>Event</th><th>Status</th><th>Termin</th><th>Location</th><th class="num">Offene Aufgaben</th><th class="num">Ergebnis (Plan)</th><th>Deine Rolle</th></tr></thead>
+  <tbody>
+  {{range .}}<tr class="row" data-nav data-href="/e/{{.E.ID}}/">
+    <td class="title"><a href="/e/{{.E.ID}}/">{{.E.Name}}</a>{{if .E.Kind}}<div class="muted small">{{.E.Kind}}</div>{{end}}</td>
+    <td>{{statusBadge .E.Status}}</td>
+    <td class="nowrap">{{if .E.Start}}{{dt .E.Start}}{{if and .HasDate (not .Past)}}<div class="muted small">{{if eq .Days 0}}heute{{else if gt .Days 0}}in {{.Days}} Tagen{{end}}</div>{{end}}{{else}}<span class="muted">offen</span>{{end}}</td>
+    <td>{{if .Loc}}{{.Loc}}{{else}}<span class="muted">–</span>{{end}}</td>
+    <td class="num">{{if .OpenTasks}}{{.OpenTasks}}{{if .Overdue}} <span class="bad small">({{.Overdue}} überfällig)</span>{{end}}{{else}}<span class="muted">–</span>{{end}}</td>
+    <td class="num">{{if .ShowProfit}}<span class="{{if neg .Profit}}bad{{else}}good{{end}}">{{eurSigned .Profit}}</span>{{else}}<span class="muted">–</span>{{end}}</td>
+    <td class="muted">{{.Role}}</td>
+  </tr>{{end}}
+  </tbody>
+</table></div>
+{{end}}

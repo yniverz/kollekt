@@ -1,0 +1,17 @@
+{{define "content"}}
+<div class="page-head"><div><h1>Verwaltung</h1><p class="sub">Benutzerkonten, Rollen und Event-Vorlagen.</p></div></div>
+<div class="tabs"><a href="/admin/users" class="{{if eq .Section "users"}}on{{end}}">Benutzer</a><a href="/admin/roles" class="{{if eq .Section "roles"}}on{{end}}">Rollen</a><a href="/admin/templates" class="{{if eq .Section "templates"}}on{{end}}">Vorlagen</a></div>
+<p class="muted">Neue Vorlagen entstehen aus bestehenden Events: Event öffnen, Einstellungen, „Als Vorlage speichern“.</p>
+{{range .Templates}}
+<form method="post" action="/admin/templates/{{.T.ID}}" class="panel">
+  <input type="hidden" name="_csrf" value="{{$.CSRF}}">
+  <div class="form-grid">
+    <div class="field"><label class="lbl">Name</label><input name="name" value="{{.T.Name}}" required></div>
+    <div class="field"><label class="lbl">Beschreibung</label><input name="description" value="{{.T.Description}}"></div>
+  </div>
+  <div class="actions"><button class="btn">Speichern</button>
+  <span class="muted small">{{.Count}} Datensätze · {{len .T.Payload.Modules}} Module</span>
+  <button class="btn danger sm" type="submit" formaction="/admin/templates/{{.T.ID}}/delete" data-confirm="Vorlage löschen?" style="margin-left:auto">Löschen</button></div>
+</form>
+{{end}}
+{{end}}

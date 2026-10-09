@@ -1,0 +1,14 @@
+{{define "content"}}
+<div class="page-head"><div><h1>{{.U.Name}}</h1><p class="sub">{{.U.Username}}</p></div><div class="actions"><a class="btn" href="/admin/users">Zurück</a></div></div>
+{{if .Flash}}{{end}}
+<form method="post" action="/admin/users/{{.U.ID}}" class="panel" style="max-width:560px">
+  <input type="hidden" name="_csrf" value="{{.CSRF}}">
+  <div class="field"><label class="lbl" for="n">Name</label><input id="n" name="name" value="{{.U.Name}}" required></div>
+  <label class="checkrow"><input type="checkbox" name="create" {{if .U.CanCreate}}checked{{end}}> Darf eigene Events anlegen</label>
+  <label class="checkrow"><input type="checkbox" name="master" {{if .U.CanMaster}}checked{{end}}> Darf Kontakte, Locations und Artikelstamm bearbeiten</label>
+  <label class="checkrow"><input type="checkbox" name="admin" {{if .U.IsAdmin}}checked{{end}}> Administrator</label>
+  <label class="checkrow"><input type="checkbox" name="disabled" {{if .U.Disabled}}checked{{end}}> Konto deaktiviert (kein Login)</label>
+  <div class="field" style="margin-top:12px"><label class="lbl" for="pw">Neues Passwort setzen</label><input id="pw" type="text" name="password" autocomplete="off" placeholder="leer lassen = unverändert"><div class="help">Beendet alle laufenden Sitzungen der Person.</div></div>
+  <div class="form-actions"><button class="btn primary">Speichern</button></div>
+</form>
+{{end}}

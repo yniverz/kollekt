@@ -1,0 +1,114 @@
+{{define "x_areas"}}{{$x := .Extra}}
+{{if $x.Cards}}
+<div class="cards">
+{{range $x.Cards}}
+  <div class="acard" style="--ac:{{.Color}}">
+    {{if $.CanEdit}}<a class="btn ghost sm edit" data-modal href="{{$.Base}}/{{.R.ID}}?next={{$.ListURL}}" aria-label="Bereich bearbeiten">{{icon "edit"}}</a>{{end}}
+    <h3>{{.Name}}</h3>
+    <div class="muted">{{if .Lead}}Leitung: {{.Lead}}{{else}}Keine Leitung festgelegt{{end}}</div>
+    <dl>
+      {{if .ShowTasks}}<dt>Aufgaben</dt><dd>{{.TasksOpen}} offen{{if .Overdue}} <span class="bad">({{.Overdue}} überfällig)</span>{{end}} / {{.TasksAll}}</dd>{{end}}
+      {{if .ShowStaff}}<dt>Personal</dt><dd>{{if .Slots}}{{.Filled}} von {{.Slots}} besetzt{{else}}–{{end}}</dd>{{end}}
+      {{if .ShowEquip}}<dt>Material</dt><dd>{{if .EquipAll}}{{.EquipOpen}} offen / {{.EquipAll}}{{else}}–{{end}}</dd>{{end}}
+      {{if .ShowCost}}<dt>Kosten (Plan)</dt><dd class="{{if .Over}}bad{{end}}">{{eur .Cost}}{{if .Limit}} <span class="muted">/ {{eur .Limit}}</span>{{end}}</dd>{{end}}
+    </dl>
+    {{if and .ShowStaff .Slots}}<div class="meter {{if eq .Filled .Slots}}good{{end}}" title="Besetzung"><i style="width:{{printf "%.0f" (pctOf (float .Filled) (float .Slots))}}%"></i></div>{{end}}
+  </div>
+{{end}}
+</div>
+{{else}}<div class="tblwrap"><div class="empty">{{$.M.Empty}}</div></div>{{end}}
+{{end}}
+
+{{define "x_budget"}}{{$b := .Extra}}{{$f := $b.Fin}}
+{{if not $b.Scoped}}
+<div class="kpis">
+  <div class="kpi"><div class="l">Einnahmen (Plan)</div><div class="v">{{eur $f.Income}}</div><div class="s">bei {{num (float $b.Guests)}} Gästen</div></div>
+  <div class="kpi"><div class="l">Ausgaben (Plan)</div><div class="v">{{eur $f.Expense}}</div><div class="s">{{eur $f.Paid}} bezahlt</div></div>
+  <div class="kpi {{if neg $f.Profit}}bad{{else}}good{{end}}"><div class="l">Ergebnis (Plan)</div><div class="v">{{eurSigned $f.Profit}}</div><div class="s">&nbsp;</div></div>
+  <div class="kpi {{if neg $f.ProfitFore}}bad{{end}}"><div class="l">Prognose mit Ist-Werten</div><div class="v">{{eurSigned $f.ProfitFore}}</div><div class="s">Ist-Beträge ersetzen Planwerte</div></div>
+</div>
+{{end}}
+{{range $b.Warn}}<div class="errbox">{{.}}</div>{{end}}
+<div class="grid2" style="margin-bottom:18px">
+  <div class="panel flat">
+    <h2>Ausgaben nach Kategorie</h2>
+    <table class="tbl compact"><thead><tr><th>Kategorie</th><th class="num">Plan</th><th class="num">Prognose</th></tr></thead><tbody>
+      {{range $b.Cats}}<tr><td>{{.Name}}{{if .Auto}} <span class="muted small">auto</span>{{end}}</td><td class="num">{{eur .Plan}}</td><td class="num">{{eur .Fore}}</td></tr>{{else}}<tr><td colspan="3" class="muted">Noch keine Ausgaben.</td></tr>{{end}}
+    </tbody></table>
+  </div>
+  <div class="panel flat">
+    <h2>Einnahmen</h2>
+    <table class="tbl compact"><thead><tr><th>Quelle</th><th class="num">Plan</th><th class="num">Prognose</th></tr></thead><tbody>
+      {{range $b.Incomes}}<tr><td>{{.Name}}{{if .Auto}} <span class="muted small">auto</span>{{end}}</td><td class="num">{{eur .Plan}}</td><td class="num">{{eur .Fore}}</td></tr>{{else}}<tr><td colspan="3" class="muted">Noch keine Einnahmen.</td></tr>{{end}}
+    </tbody></table>
+  </div>
+</div>
+{{if $b.Areas}}
+<div class="panel flat" style="margin-bottom:18px">
+  <h2>Kosten nach Bereich</h2>
+  <table class="tbl compact"><thead><tr><th>Bereich</th><th class="num">Geplant</th><th class="num">Limit</th><th style="width:30%"></th></tr></thead><tbody>
+  {{range $b.Areas}}<tr><td><span class="dot" style="background:{{.Color}};display:inline-block;margin-right:7px"></span>{{.Name}}</td><td class="num {{if .Over}}bad{{end}}">{{eur .Plan}}</td><td class="num">{{if .Limit}}{{eur .Limit}}{{else}}–{{end}}</td>
+  <td>{{if .Limit}}<div class="meter {{if .Over}}bad{{end}}"><i style="width:{{printf "%.0f" (pctOf .Plan .Limit)}}%;max-width:100%"></i></div>{{end}}</td></tr>{{end}}
+  </tbody></table>
+</div>
+{{end}}
+{{if $b.Open}}
+<div class="panel"><h2>Offene Zahlungen</h2>
+  <ul class="alist">{{range $b.Open}}<li><span class="when {{if .Late}}late{{end}}">{{date .Due}}</span><span>{{.Title}}</span><span style="margin-left:auto" class="num">{{eur .Amt}}</span></li>{{end}}</ul>
+</div>
+{{end}}
+{{if $b.AutoRows}}
+<details class="panel d">
+  <summary>Automatisch aus anderen Modulen eingerechnet ({{len $b.AutoRows}} Posten)</summary>
+  <div class="tblwrap" style="border:0;margin-top:8px"><table class="tbl compact"><tbody>
+  {{range $b.AutoRows}}<tr><td class="muted" style="width:140px">{{srcLabel .Source}}</td><td>{{.Title}}</td><td class="num">{{eur .Plan}}</td></tr>{{end}}
+  </tbody></table></div>
+</details>
+{{end}}
+<h2 style="margin:6px 0 10px">Manuelle Posten</h2>
+{{end}}
+
+{{define "x_lineup"}}{{$l := .Extra}}
+{{if $l.Counts}}<p>{{range $l.Counts}}{{badge (printf "%d %s" .N .Label) .Color}} {{end}}{{if $l.Unscheduled}}<span class="muted small">· {{$l.Unscheduled}} ohne Zeit</span>{{end}}{{if $l.ShowFees}}<span class="muted small"> · Gagen und Nebenkosten: {{eur $l.Fees}}</span>{{end}}</p>{{end}}
+{{range $l.Days}}
+<div class="tt panel">
+  <h3>{{.Label}}</h3>
+  <div class="tt-axis">{{range .Ticks}}<span style="left:{{printf "%.2f" .Left}}%">{{.Label}}</span>{{end}}</div>
+  {{$step := .Step}}
+  {{range .Stages}}
+  <div class="tt-lane"><div class="nm">{{.Name}}</div>
+    <div class="tt-track" style="--step:{{printf "%.3f" $step}}%">
+      {{range .Blocks}}<a class="tt-b {{if .Conflict}}conflict{{end}}" data-modal href="/e/{{$.Event.ID}}/m/lineup/{{.ID}}?next={{$.ListURL}}" style="left:{{printf "%.2f" .Left}}%;width:{{printf "%.2f" .Width}}%;--c:var(--c-{{.Color}});--bgc:var(--c-{{.Color}}-bg)" title="{{.Name}} · {{.Time}} · {{.StatusLabel}}{{if .Conflict}} · Überschneidung{{end}}"><b>{{.Name}}</b>{{.Time}}</a>{{end}}
+    </div>
+  </div>
+  {{end}}
+</div>
+{{end}}
+{{end}}
+
+{{define "x_staff"}}{{$s := .Extra}}
+{{if $s.Slots}}
+<div class="grid2" style="margin-bottom:18px">
+  <div class="panel flat"><h2>Besetzung nach Bereich</h2>
+    <table class="tbl compact"><thead><tr><th>Bereich</th><th class="num">Besetzt</th><th class="num">Offen</th><th class="num">Std.</th>{{if $s.ShowCost}}<th class="num">Kosten</th>{{end}}</tr></thead><tbody>
+    {{range $s.Areas}}<tr><td><span class="dot" style="background:{{.Color}};display:inline-block;margin-right:7px"></span>{{.Name}}</td><td class="num">{{.Filled}}/{{.Slots}}</td><td class="num {{if lt .Filled .Slots}}warn-t{{end}}">{{sub .Slots .Filled}}</td><td class="num">{{num .Hours}}</td>{{if $s.ShowCost}}<td class="num">{{eur .Cost}}</td>{{end}}</tr>{{end}}
+    <tr class="sum"><td>Gesamt</td><td class="num">{{$s.Filled}}/{{$s.Slots}}</td><td class="num">{{$s.Open}}</td><td></td>{{if $s.ShowCost}}<td class="num">{{eur $s.Cost}}</td>{{end}}</tr>
+    </tbody></table></div>
+  <div class="panel flat"><h2>Pro Person</h2>
+    <table class="tbl compact"><thead><tr><th>Person</th><th class="num">Schichten</th><th class="num">Stunden</th></tr></thead><tbody>
+    {{range $s.People}}<tr><td>{{.Name}}{{if .Conflict}} <span class="badge b-red">Überschneidung</span>{{end}}</td><td class="num">{{.Shifts}}</td><td class="num">{{num .Hours}}</td></tr>{{else}}<tr><td colspan="3" class="muted">Noch niemand eingeteilt.</td></tr>{{end}}
+    </tbody></table></div>
+</div>
+{{end}}
+{{end}}
+
+{{define "x_timeline"}}{{$t := .Extra}}
+{{range $t.Days}}
+<div class="panel flat" style="margin-bottom:14px"><h2>{{.Label}}</h2>
+  <table class="tbl compact"><tbody>
+  {{range .Entries}}<tr><td class="nowrap" style="width:110px"><b>{{.Start}}</b>{{if .End}}<span class="muted"> – {{.End}}</span>{{end}}</td><td>{{.Title}}</td><td>{{badge .Kind .KindColor}}</td><td class="muted">{{.Where}}</td><td class="muted">{{.Resp}}</td></tr>{{end}}
+  </tbody></table>
+</div>
+{{else}}{{end}}
+{{if $t.Days}}<h2 style="margin:18px 0 10px">Einträge bearbeiten</h2>{{end}}
+{{end}}

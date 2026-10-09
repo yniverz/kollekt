@@ -1,0 +1,13 @@
+{{define "content"}}
+<div class="login">
+  <a class="brand" href="/">Kollekt<span>.</span></a>
+  <p class="muted">Planung für Events und Kollektive.</p>
+  {{if .Error}}<div class="errbox" role="alert">{{.Error}}</div>{{end}}
+  <form method="post" action="/login">
+    <input type="hidden" name="next" value="{{.Next}}">
+    <div class="field"><label class="lbl" for="u">Benutzername</label><input id="u" name="username" value="{{.Username}}" autocomplete="username" autofocus required></div>
+    <div class="field"><label class="lbl" for="p">Passwort</label><input id="p" type="password" name="password" autocomplete="current-password" required></div>
+    <button class="btn primary" type="submit">Anmelden</button>
+  </form>
+</div>
+{{end}}

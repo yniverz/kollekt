@@ -1,0 +1,94 @@
+{{define "content"}}
+<div class="page-head">
+  <div><h1>Kalkulation</h1><p class="sub">Was kommt bei welcher Gästezahl heraus? Ausgaben stammen aus Budget, Line-up, Personal, Material, Genehmigungen und Bar.</p></div>
+</div>
+
+<div class="scenarios">
+{{range $i, $r := .Rows}}
+  <div class="scn {{if eq $i $.S.Baseline}}base{{end}}">
+    <h3><span>{{$r.Name}}</span><span class="muted">{{num (float $r.Guests)}} Gäste</span></h3>
+    <div class="res {{if neg $r.Profit}}bad{{else}}good{{end}}">{{eurSigned $r.Profit}}</div>
+    <dl>
+      <dt>Eintritt</dt><dd>{{eur $r.TicketNet}}</dd>
+      <dt>Verkauf / Bar</dt><dd>{{eur $r.BarNet}}</dd>
+      {{if $r.OtherIn}}<dt>Weitere Einnahmen</dt><dd>{{eur $r.OtherIn}}</dd>{{end}}
+      <dt>Ausgaben</dt><dd>{{eur $r.Cost}}</dd>
+      <dt>Pro Gast</dt><dd>{{eurSigned $r.PerGuest}}</dd>
+      <dt>Marge</dt><dd>{{pct $r.Margin}}</dd>
+    </dl>
+    {{if $r.OverCapacity}}<p style="margin:8px 0 0">{{badge "Über Kapazität" "red"}}</p>{{end}}
+    {{if eq $i $.S.Baseline}}<p class="muted small" style="margin:8px 0 0">Planungsbasis für Bar und Budget</p>{{end}}
+  </div>
+{{end}}
+</div>
+
+<div class="grid2" style="margin-bottom:18px">
+  <div class="panel">
+    <h2>Break-even</h2>
+    {{if eq .BE 0}}
+      <div style="font-family:var(--serif);font-size:24px;line-height:1.2">Keine Fixkosten erfasst</div>
+      <p class="muted">Ohne Gäste entstehen aktuell keine Kosten, deshalb gibt es keinen Break-even. Trage Location, Technik, Gagen und Co. ein.</p>
+    {{else if gt .BE 0}}
+      <div style="font-family:var(--serif);font-size:30px;line-height:1.2">{{num (float .BE)}} Gäste</div>
+      <p class="muted">Ab dieser Gästezahl decken die Einnahmen alle geplanten Ausgaben.
+      {{if gt .Base.Guests 0}}Das sind {{pct (pctOf (float .BE) (float .Base.Guests))}} der Planungsbasis.{{end}}</p>
+      {{if gt .Contrib 0.0}}<p class="small muted">Jeder weitere Gast bringt etwa {{eur .Contrib}} Gewinn.</p>{{end}}
+    {{else}}
+      <div style="font-family:var(--serif);font-size:24px;line-height:1.2" class="bad">Nicht erreichbar</div>
+      <p class="muted">Pro Gast entsteht aktuell kein Gewinn (Eintritt plus Verkauf minus Gästekosten ist ≤ 0). Erhöhe den Eintritt, die Preise oder senke die Kosten pro Gast.</p>
+    {{end}}
+    {{if gt .Capacity 0.0}}<p class="small muted">Kapazität der Location: {{num .Capacity}} Personen.</p>{{end}}
+  </div>
+  <div class="panel">
+    <h2>Ergebnis nach Eintrittspreis</h2>
+    <div class="tblwrap heat" style="border:0"><table class="tbl compact heat">
+      <thead><tr><th>Ø Eintritt</th>{{range .Rows}}<th class="num">{{.Guests}} Gäste</th>{{end}}</tr></thead>
+      <tbody>{{range .Grid}}<tr class="{{if .Cur}}cur{{end}}"><td>{{eur .Price}}{{if .Cur}} <span class="muted small">aktuell</span>{{end}}</td>{{range .Cells}}<td class="num {{if neg .}}neg{{else}}pos{{end}}">{{eurSigned .}}</td>{{end}}</tr>{{end}}</tbody>
+    </table></div>
+  </div>
+</div>
+
+{{if .CanEdit}}
+<form method="post" action="/e/{{.Event.ID}}/calc" class="panel" id="calcform">
+  <input type="hidden" name="_csrf" value="{{.CSRF}}">
+  <h2>Annahmen</h2>
+  <div class="grid2">
+    <div>
+      <h3 style="margin-bottom:8px">Szenarien</h3>
+      <div id="scs">
+      {{range $i, $s := .S.Scenarios}}
+        <div class="rowline sc"><input name="sc_name" value="{{$s.Name}}" aria-label="Name"><input type="number" min="0" name="sc_guests" value="{{$s.Guests}}" aria-label="Gäste"><button type="button" class="btn ghost sm" data-rm-row title="Entfernen">×</button></div>
+      {{end}}
+      </div>
+      <template id="tpl-sc"><div class="rowline sc"><input name="sc_name" placeholder="Name" aria-label="Name"><input type="number" min="0" name="sc_guests" placeholder="Gäste" aria-label="Gäste"><button type="button" class="btn ghost sm" data-rm-row title="Entfernen">×</button></div></template>
+      <button type="button" class="btn sm" data-add-row="tpl-sc" data-into="scs">{{icon "plus"}} Szenario</button>
+      <div class="field" style="margin-top:14px"><label class="lbl" for="bl">Planungsbasis</label>
+        <select id="bl" name="baseline">{{range $i, $s := .S.Scenarios}}<option value="{{$i}}" {{if eq $i $.S.Baseline}}selected{{end}}>{{$s.Name}} ({{$s.Guests}} Gäste)</option>{{end}}</select>
+        <div class="help">Daraus werden Bar-Mengen, „Pro Gast“-Posten und die Übersicht berechnet.</div></div>
+    </div>
+    <div>
+      <h3 style="margin-bottom:8px">Eintrittspreise</h3>
+      <div id="trs">
+      {{range $t := .S.Tiers}}
+        <div class="rowline tr"><input name="t_name" value="{{$t.Name}}" aria-label="Bezeichnung"><div class="inp-suffix"><input type="number" step="any" min="0" name="t_price" value="{{$t.Price}}" aria-label="Preis"><span>€</span></div><div class="inp-suffix"><input type="number" step="any" min="0" name="t_share" value="{{$t.Share}}" aria-label="Anteil"><span>%</span></div><button type="button" class="btn ghost sm" data-rm-row title="Entfernen">×</button></div>
+      {{end}}
+      </div>
+      <template id="tpl-tr"><div class="rowline tr"><input name="t_name" placeholder="z. B. Abendkasse" aria-label="Bezeichnung"><div class="inp-suffix"><input type="number" step="any" min="0" name="t_price" placeholder="Preis" aria-label="Preis"><span>€</span></div><div class="inp-suffix"><input type="number" step="any" min="0" name="t_share" placeholder="Anteil" aria-label="Anteil"><span>%</span></div><button type="button" class="btn ghost sm" data-rm-row title="Entfernen">×</button></div></template>
+      <button type="button" class="btn sm" data-add-row="tpl-tr" data-into="trs">{{icon "plus"}} Preisstufe</button>
+      <p class="help muted small" style="margin-top:6px">Anteil = Prozent aller Gäste. Der Rest (falls unter 100 %) zahlt nichts, z. B. Gästeliste.{{if gt .ShareSum 100.01}} <b class="bad">Aktuell {{num .ShareSum}} %!</b>{{else}} Aktuell {{num .ShareSum}} %, Ø {{eur .AvgPrice}} pro Gast.{{end}}</p>
+      <div class="form-grid" style="margin-top:14px">
+        <div class="field"><label class="lbl" for="vat">Umsatzsteuer auf Einnahmen</label><div class="inp-suffix"><input id="vat" type="number" step="any" min="0" name="vat" value="{{.S.VAT}}"><span>%</span></div><div class="help">0 = Brutto rechnen. Mit 19 werden Eintritt und Verkauf netto gerechnet.</div></div>
+        {{if not .HasBar}}<div class="field"><label class="lbl" for="bs">Verzehr pro Gast</label><div class="inp-suffix"><input id="bs" type="number" step="any" min="0" name="bar_spend" value="{{.S.BarSpend}}"><span>€</span></div><div class="help">Pauschale, solange das Bar-Modul nicht aktiv ist.</div></div>{{else}}<input type="hidden" name="bar_spend" value="{{.S.BarSpend}}">{{end}}
+      </div>
+    </div>
+  </div>
+  <details class="d" {{if .Actual}}open{{end}} style="margin-top:8px"><summary>Nach dem Event: tatsächliche Werte</summary>
+    <div class="form-grid" style="margin-top:10px">
+      <div class="field"><label class="lbl" for="ag">Tatsächliche Gäste</label><input id="ag" type="number" min="0" name="actual_guests" value="{{if .S.ActualGuests}}{{.S.ActualGuests}}{{end}}"></div>
+      <div class="field"><label class="lbl" for="at">Tatsächliche Eintrittseinnahmen</label><div class="inp-suffix"><input id="at" type="number" step="any" min="0" name="actual_tickets" value="{{.S.ActualTickets}}"><span>€</span></div><div class="help">Ersetzt in der Prognose den geplanten Eintritt. Bar-Ist kommt aus „Ist verkauft“ bei den Verkaufsartikeln.</div></div>
+    </div>
+  </details>
+  <div class="form-actions"><button class="btn primary">Speichern</button></div>
+</form>
+{{end}}
+{{end}}

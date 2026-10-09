@@ -1,0 +1,24 @@
+{{define "content"}}
+<div class="page-head"><div><h1>Verwaltung</h1><p class="sub">Benutzerkonten, Rollen und Event-Vorlagen.</p></div></div>
+<div class="tabs"><a href="/admin/users" class="{{if eq .Section "users"}}on{{end}}">Benutzer</a><a href="/admin/roles" class="{{if eq .Section "roles"}}on{{end}}">Rollen</a><a href="/admin/templates" class="{{if eq .Section "templates"}}on{{end}}">Vorlagen</a></div>
+{{if .Error}}<div class="errbox">{{.Error}}</div>{{end}}
+<div class="panel flat"><h2>Benutzer</h2>
+<table class="tbl"><thead><tr><th>Name</th><th>Benutzername</th><th>Rechte</th><th></th></tr></thead><tbody>
+{{range .Users}}<tr class="{{if .Disabled}}dim{{end}}"><td class="title"><a href="/admin/users/{{.ID}}">{{.Name}}</a></td><td>{{.Username}}</td>
+<td>{{if .IsAdmin}}<span class="badge b-red">Admin</span> {{end}}{{if .CanCreate}}<span class="badge b-blue">Events anlegen</span> {{end}}{{if .CanMaster}}<span class="badge b-gray">Stammdaten</span> {{end}}{{if .Disabled}}<span class="badge b-ink">deaktiviert</span>{{end}}</td>
+<td style="text-align:right"><a class="btn sm" href="/admin/users/{{.ID}}">Bearbeiten</a></td></tr>{{end}}
+</tbody></table></div>
+<form method="post" action="/admin/users" class="panel" style="max-width:640px">
+  <input type="hidden" name="_csrf" value="{{.CSRF}}">
+  <h2>Neuen Benutzer anlegen</h2>
+  <div class="form-grid">
+    <div class="field"><label class="lbl" for="n">Name</label><input id="n" name="name" value="{{.Form.name}}" required></div>
+    <div class="field"><label class="lbl" for="un">Benutzername</label><input id="un" name="username" value="{{.Form.username}}" autocomplete="off" required></div>
+    <div class="field wide"><label class="lbl" for="pw">Startpasswort</label><input id="pw" type="text" name="password" minlength="10" autocomplete="off" required><div class="help">Mindestens 10 Zeichen. Die Person kann es unter „Mein Konto“ ändern.</div></div>
+  </div>
+  <label class="checkrow"><input type="checkbox" name="create" checked> Darf eigene Events anlegen</label>
+  <label class="checkrow"><input type="checkbox" name="master" checked> Darf Kontakte, Locations und Artikelstamm bearbeiten</label>
+  <label class="checkrow"><input type="checkbox" name="admin"> Administrator (sieht und ändert alles)</label>
+  <div class="form-actions"><button class="btn primary">Anlegen</button></div>
+</form>
+{{end}}

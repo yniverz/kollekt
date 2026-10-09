@@ -1,0 +1,14 @@
+{{define "content"}}
+<div class="page-head"><div><h1>Mein Konto</h1><p class="sub">{{.User.Name}} · {{.User.Username}}</p></div></div>
+<div class="panel" style="max-width:480px">
+  <h2>Passwort ändern</h2>
+  {{if .Error}}<div class="errbox">{{.Error}}</div>{{end}}
+  <form method="post" action="/account">
+    <input type="hidden" name="_csrf" value="{{.CSRF}}">
+    <div class="field"><label class="lbl" for="o">Aktuelles Passwort</label><input id="o" type="password" name="old" autocomplete="current-password" required></div>
+    <div class="field"><label class="lbl" for="n">Neues Passwort</label><input id="n" type="password" name="new" autocomplete="new-password" minlength="10" required></div>
+    <div class="field"><label class="lbl" for="n2">Neues Passwort wiederholen</label><input id="n2" type="password" name="new2" autocomplete="new-password" required></div>
+    <button class="btn primary">Speichern</button>
+  </form>
+</div>
+{{end}}

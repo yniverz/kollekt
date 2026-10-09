@@ -1,0 +1,14 @@
+{{define "content"}}
+<div class="login">
+  <a class="brand" href="/">Kollekt<span>.</span></a>
+  <p>Willkommen. Lege zuerst das Administrator-Konto an. Alle weiteren Personen legst du danach unter „Verwaltung“ an.</p>
+  {{if .Error}}<div class="errbox" role="alert">{{.Error}}</div>{{end}}
+  <form method="post" action="/setup">
+    <div class="field"><label class="lbl" for="n">Dein Name</label><input id="n" name="name" value="{{.Name}}" required autofocus></div>
+    <div class="field"><label class="lbl" for="u">Benutzername</label><input id="u" name="username" value="{{.Username}}" autocomplete="username" required></div>
+    <div class="field"><label class="lbl" for="p">Passwort</label><input id="p" type="password" name="password" autocomplete="new-password" minlength="10" required><div class="help">Mindestens 10 Zeichen.</div></div>
+    <div class="field"><label class="lbl" for="p2">Passwort wiederholen</label><input id="p2" type="password" name="password2" autocomplete="new-password" required></div>
+    <button class="btn primary" type="submit">Konto anlegen</button>
+  </form>
+</div>
+{{end}}

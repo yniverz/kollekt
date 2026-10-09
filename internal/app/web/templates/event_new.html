@@ -1,0 +1,22 @@
+{{define "content"}}
+<div class="page-head"><div><h1>Neues Event</h1><p class="sub">Eine Vorlage bringt Bereiche, Aufgaben, Genehmigungen und Beispielkalkulation mit. Alles lässt sich danach anpassen.</p></div></div>
+{{if .Error}}<div class="errbox">{{.Error}}</div>{{end}}
+<form method="post" action="/events/new" class="panel" style="max-width:720px">
+  <input type="hidden" name="_csrf" value="{{.CSRF}}">
+  <div class="form-grid">
+    <div class="field wide"><label class="lbl" for="name">Name</label><input id="name" name="name" value="{{.Form.name}}" required autofocus placeholder="z. B. Sommer Open Air 2027"></div>
+    <div class="field"><label class="lbl" for="start">Beginn</label><input id="start" type="datetime-local" name="start" value="{{.Form.start}}"></div>
+    <div class="field"><label class="lbl" for="end">Ende</label><input id="end" type="datetime-local" name="end" value="{{.Form.end}}"></div>
+    <div class="field wide"><label class="lbl" for="loc">Location</label>
+      <select id="loc" name="location"><option value="">Noch offen</option>{{range .Locations}}<option value="{{.ID}}" {{if eq .ID $.Form.location}}selected{{end}}>{{.Title}}</option>{{end}}</select>
+      <div class="help">Locations pflegst du unter „Locations“. Später kannst du hier auch mehrere anfragen und vergleichen.</div></div>
+  </div>
+  <div class="field"><span class="lbl">Vorlage</span>
+    {{range .Templates}}
+      <label class="checkrow" style="align-items:flex-start"><input type="radio" name="template" value="{{.ID}}" {{if eq (itoa .ID) $.Form.template}}checked{{end}}>
+      <span><b>{{.Name}}</b><br><span class="muted small">{{.Description}}</span></span></label>
+    {{end}}
+  </div>
+  <div class="form-actions"><button class="btn primary">Event anlegen</button><a class="btn ghost" href="/">Abbrechen</a></div>
+</form>
+{{end}}

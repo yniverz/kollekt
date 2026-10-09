@@ -1,0 +1,65 @@
+{{define "content"}}
+{{$v := .V}}
+<div class="page-head">
+  <div>
+    <h1>{{.Event.Name}}</h1>
+    <p class="sub">
+      {{statusBadge .Event.Status}}
+      {{if .Event.Start}}&nbsp;{{dt .Event.Start}}{{if .Event.End}} – {{dt .Event.End}}{{end}}{{else}}&nbsp;Termin noch offen{{end}}
+      {{if $v.Loc}} · {{$v.Loc}}{{if $v.LocCap}} ({{num $v.LocCap}} Plätze){{end}}{{end}}
+      {{if $v.HasDate}}{{if gt $v.Days 0}} · noch {{$v.Days}} Tage{{else if eq $v.Days 0}} · heute{{end}}{{end}}
+    </p>
+    {{if .Event.Description}}<p class="sub">{{nl2br .Event.Description}}</p>{{end}}
+  </div>
+  <div class="actions">{{if .CanSettings}}<a class="btn" href="/e/{{.Event.ID}}/settings">{{icon "sliders"}} Einstellungen</a>{{end}}</div>
+</div>
+
+{{if $v.KPIs}}
+<div class="kpis">
+  {{range $v.KPIs}}{{if .Link}}<a href="{{.Link}}" class="kpi {{.Tone}}"><div class="l">{{.Label}}</div><div class="v">{{.Value}}</div><div class="s">{{if .Sub}}{{.Sub}}{{else}}&nbsp;{{end}}</div></a>{{else}}<div class="kpi {{.Tone}}"><div class="l">{{.Label}}</div><div class="v">{{.Value}}</div><div class="s">{{if .Sub}}{{.Sub}}{{else}}&nbsp;{{end}}</div></div>{{end}}{{end}}
+</div>
+{{end}}
+
+<div class="cols-2-1">
+  <div class="stack">
+    <div class="panel">
+      <h2>Achtung</h2>
+      {{if $v.Warns}}
+        <ul class="alist">{{range $v.Warns}}<li><span class="dot {{if eq .Level "bad"}}bad{{end}}"></span><span>{{if .Link}}<a href="{{.Link}}">{{.Text}}</a>{{else}}{{.Text}}{{end}}</span></li>{{end}}</ul>
+      {{else}}<p class="muted" style="margin:0">Nichts Auffälliges. Alles im grünen Bereich.</p>{{end}}
+    </div>
+    <div class="panel">
+      <h2>Als Nächstes fällig</h2>
+      {{if $v.Upcoming}}
+        <ul class="alist">{{range $v.Upcoming}}<li><span class="when {{if .Late}}late{{end}}">{{if .Late}}überfällig{{else if eq .Days 0}}heute{{else if eq .Days 1}}morgen{{else}}in {{.Days}} T.{{end}}</span><span><a href="{{.Link}}">{{.Title}}</a> <span class="muted">· {{.What}}, {{date .Date}}</span></span></li>{{end}}</ul>
+      {{else}}<p class="muted" style="margin:0">In den nächsten drei Wochen steht nichts mit Frist an.</p>{{end}}
+    </div>
+    {{if $v.Areas}}
+    <div class="panel">
+      <h2>Bereiche <a class="more" href="/e/{{.Event.ID}}/m/areas">Alle ansehen</a></h2>
+      <div class="tblwrap" style="border:0"><table class="tbl compact">
+        <thead><tr><th>Bereich</th><th>Leitung</th><th class="num">Aufgaben</th><th class="num">Personal</th><th class="num">Kosten</th></tr></thead>
+        <tbody>{{range $v.Areas}}<tr>
+          <td class="title"><span class="dot" style="background:{{.Color}};display:inline-block;margin-right:7px"></span>{{.Name}}</td>
+          <td>{{if .Lead}}{{.Lead}}{{else}}<span class="muted">–</span>{{end}}</td>
+          <td class="num">{{if .ShowTasks}}{{.TasksOpen}} offen{{else}}–{{end}}</td>
+          <td class="num">{{if .ShowStaff}}{{if .Slots}}{{.Filled}}/{{.Slots}}{{else}}–{{end}}{{else}}–{{end}}</td>
+          <td class="num {{if .Over}}bad{{end}}">{{if .ShowCost}}{{eur .Cost}}{{else}}–{{end}}</td>
+        </tr>{{end}}</tbody>
+      </table></div>
+    </div>
+    {{end}}
+  </div>
+  <div class="stack">
+    <div class="panel">
+      <h2>Team</h2>
+      {{if $v.Team}}<ul class="alist">{{range $v.Team}}{{if .User}}<li><span>{{.User.Name}}</span><span class="muted" style="margin-left:auto">{{if .Role}}{{.Role.Name}}{{end}}</span></li>{{end}}{{end}}</ul>{{else}}<p class="muted" style="margin:0">Noch niemand eingeladen.</p>{{end}}
+      {{if .CanSettings}}<p style="margin:10px 0 0"><a href="/e/{{.Event.ID}}/team">Team &amp; Rechte verwalten</a></p>{{end}}
+    </div>
+    <div class="panel">
+      <h2>Letzte Änderungen</h2>
+      {{if $v.Audit}}<ul class="alist">{{range $v.Audit}}<li style="display:block"><b>{{.User}}</b> {{.Action}}: {{.Title}}<div class="muted small">{{dt (.TS.Format "2006-01-02T15:04")}}</div></li>{{end}}</ul>{{else}}<p class="muted" style="margin:0">Noch keine Änderungen.</p>{{end}}
+    </div>
+  </div>
+</div>
+{{end}}

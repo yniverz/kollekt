@@ -1,0 +1,64 @@
+{{define "content"}}
+<div class="page-head">
+  <div>
+    <h1>{{.M.Name}}</h1>
+    {{if .M.Desc}}<p class="sub">{{.M.Desc}}</p>{{end}}
+  </div>
+  <div class="actions">
+    {{if .CanEdit}}<a class="btn primary" data-modal href="{{.Base}}/new?next={{.ListURL}}">{{icon "plus"}} {{.M.Singular}} hinzufügen</a>{{end}}
+  </div>
+</div>
+
+{{if and .Extra (ne .M.ExtraPos "bottom")}}{{include .M.ExtraTpl .}}{{end}}
+
+{{if not .M.NoList}}
+<form class="filters" method="get" action="{{.Base}}">
+  <input type="search" name="q" value="{{.Q}}" placeholder="Suchen …" aria-label="Suchen" style="width:200px">
+  {{range .Filters}}
+    <select name="{{.Key}}" aria-label="{{.Label}}" data-autosubmit>
+      <option value="">{{.Label}}: alle</option>
+      {{range .Opts}}<option value="{{.V}}" {{if .Sel}}selected{{end}}>{{.L}}</option>{{end}}
+    </select>
+  {{end}}
+  {{if .HasDone}}<label class="toggle"><input type="checkbox" name="done" value="1" {{if .ShowDone}}checked{{end}} data-autosubmit> Erledigte zeigen</label>{{end}}
+  <button class="btn sm" type="submit">Filtern</button>
+  {{if .FilterActive}}<a class="btn ghost sm" href="{{.Base}}">Zurücksetzen</a>{{end}}
+</form>
+
+{{if eq .Total 0}}
+  <div class="tblwrap"><div class="empty">{{if .FilterActive}}Keine Treffer für diese Filter.{{else}}{{if .M.Empty}}{{.M.Empty}}{{else}}Noch keine Einträge.{{end}}{{end}}</div></div>
+{{else}}
+<div class="tblwrap"><table class="tbl">
+  <thead><tr>{{range .Cols}}<th class="{{if .Num}}num{{end}}">{{.Label}}</th>{{end}}<th></th></tr></thead>
+  <tbody>
+  {{range $g := .Groups}}
+    {{if $g.Label}}<tr class="grp"><td colspan="{{add (len $.Cols) 1}}">{{$g.Label}} <span class="muted">· {{len $g.Rows}}</span></td></tr>{{end}}
+    {{range $row := $g.Rows}}
+    <tr class="row {{if $row.Muted}}done{{end}}" {{if $row.Edit}}data-href="{{$.Base}}/{{$row.R.ID}}?next={{urlq $.ListURL}}"{{end}}>
+      {{range $c := $row.Cells}}{{template "cell" dict "C" $c "Row" $row "Base" $.Base "CanEdit" $.CanEdit "Next" $.ListURL}}{{end}}
+      <td class="nowrap" style="text-align:right">{{range $a := $row.Acts}}
+        <form method="post" action="{{$.Base}}/{{$row.R.ID}}/do/{{$a.Key}}" style="display:inline"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><input type="hidden" name="next" value="{{$.ListURL}}"><button class="btn sm">{{$a.Label}}</button></form>{{end}}</td>
+    </tr>
+    {{end}}
+    {{if $g.Sums}}<tr class="sum">{{range $s := $g.Sums}}<td class="num">{{$s}}</td>{{end}}<td></td></tr>{{end}}
+  {{end}}
+  {{if .Sums}}{{if gt (len .Groups) 1}}<tr class="sum">{{range $s := .Sums}}<td class="num">{{$s}}</td>{{end}}<td></td></tr>{{end}}{{end}}
+  </tbody>
+</table></div>
+<p class="muted small" style="margin-top:8px">{{.Total}} {{if eq .Total 1}}Eintrag{{else}}Einträge{{end}}</p>
+{{end}}
+{{end}}
+
+{{if and .Extra (eq .M.ExtraPos "bottom")}}{{include .M.ExtraTpl .}}{{end}}
+{{end}}
+
+{{define "cell"}}{{$c := .C}}
+{{if eq $c.Kind "title"}}<td class="title">{{if .CanEdit}}<a data-modal href="{{.Base}}/{{.Row.R.ID}}?next={{.Next}}">{{$c.Text}}</a>{{else}}{{$c.Text}}{{end}}</td>
+{{else if eq $c.Kind "badge"}}<td>{{badge $c.Text $c.Color}}</td>
+{{else if eq $c.Kind "quick"}}<td><select class="quick" data-color="{{optColor $c.Opts $c.Val}}" data-field="{{$c.Key}}" data-url="{{.Base}}/{{.Row.R.ID}}/quick" aria-label="Status ändern">{{range $c.Opts}}<option value="{{.V}}" data-color="{{.Color}}" {{if eq .V $c.Val}}selected{{end}}>{{.L}}</option>{{end}}</select></td>
+{{else if eq $c.Kind "money"}}<td class="num">{{$c.Text}}</td>
+{{else if eq $c.Kind "number"}}<td class="num">{{$c.Text}}</td>
+{{else if eq $c.Kind "bool"}}<td>{{if eq $c.Val "1"}}<span class="chk on" title="Ja"></span>{{else}}<span class="chk" title="Nein"></span>{{end}}</td>
+{{else if eq $c.Kind "link"}}<td><a href="{{safeURL $c.URL}}" target="_blank" rel="noopener noreferrer">{{$c.Text}}</a></td>
+{{else if eq $c.Kind "empty"}}<td class="{{if $c.Num}}num{{end}} muted">–</td>
+{{else}}<td class="{{$c.Color}}">{{$c.Text}}</td>{{end}}{{end}}

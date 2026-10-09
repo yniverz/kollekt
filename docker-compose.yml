@@ -1,0 +1,21 @@
+# Für Portainer: Stacks > Add stack > Repository (dieses Repo) oder Web editor.
+# Beim ersten Start legt KOLLEKT_ADMIN_USER / KOLLEKT_ADMIN_PASSWORD das Admin-Konto an.
+# Ohne diese Variablen erscheint beim ersten Aufruf eine Einrichtungsseite.
+services:
+  kollekt:
+    build: .
+    image: kollekt:latest
+    container_name: kollekt
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      TZ: Europe/Berlin
+      KOLLEKT_SECURE_COOKIES: "1"   # auf "" setzen, wenn ihr ohne HTTPS (nur im lokalen Netz) zugreift
+      # KOLLEKT_ADMIN_USER: admin
+      # KOLLEKT_ADMIN_PASSWORD: bitte-aendern-mindestens-10-zeichen
+    volumes:
+      - kollekt-data:/data
+
+volumes:
+  kollekt-data:

@@ -1,0 +1,39 @@
+{{define "content"}}
+<div class="page-head"><div><h1>Team &amp; Rechte</h1><p class="sub">Wer darf dieses Event sehen und was darf die Person dort tun? Die Rechte hängen an der Rolle. Rollen legst du unter Verwaltung an.</p></div></div>
+<div class="panel flat">
+  <h2>Mitglieder</h2>
+  <table class="tbl"><thead><tr><th>Person</th><th>Rolle</th><th>Bereiche</th><th></th></tr></thead><tbody>
+  {{range .Members}}{{if .M.User}}
+    <tr><td class="title">{{.M.User.Name}}<div class="muted small">{{.M.User.Username}}</div></td>
+    <td>{{if .M.Role}}{{.M.Role.Name}}{{if .M.Role.AreaScoped}} <span class="badge b-yellow">nur eigene Bereiche</span>{{end}}{{end}}</td>
+    <td>{{if .Areas}}{{.Areas}}{{else}}<span class="muted">–</span>{{end}}</td>
+    <td style="text-align:right" class="nowrap">
+      <details style="display:inline-block;text-align:left"><summary class="btn sm">Ändern</summary>
+      <form method="post" action="/e/{{$.Event.ID}}/team" class="panel" style="position:absolute;z-index:5;min-width:300px;margin-top:6px">
+        <input type="hidden" name="_csrf" value="{{$.CSRF}}"><input type="hidden" name="user" value="{{.M.UserID}}">
+        <div class="field"><label class="lbl">Rolle</label><select name="role">{{$rid := .M.RoleID}}{{range $.Roles}}<option value="{{.ID}}" {{if eq .ID $rid}}selected{{end}}>{{.Name}}</option>{{end}}</select></div>
+        <div class="field"><span class="lbl">Bereiche</span>{{$sel := .Sel}}{{range $.Areas}}<label class="checkrow"><input type="checkbox" name="area" value="{{.ID}}" {{if index $sel (int64 .ID)}}checked{{end}}> {{.Title}}</label>{{else}}<span class="muted small">Noch keine Bereiche.</span>{{end}}</div>
+        <button class="btn primary sm">Speichern</button>
+      </form></details>
+      <form method="post" action="/e/{{$.Event.ID}}/team/{{.M.UserID}}/remove" style="display:inline"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="btn ghost sm" data-confirm="Mitglied entfernen?">Entfernen</button></form>
+    </td></tr>
+  {{end}}{{else}}<tr><td colspan="4" class="empty">Noch keine Mitglieder.</td></tr>{{end}}
+  </tbody></table>
+</div>
+{{if .IsAdmin}}<p class="muted small">Administratoren sehen und bearbeiten alle Events, ohne Mitglied zu sein.</p>{{end}}
+<form method="post" action="/e/{{.Event.ID}}/team" class="panel">
+  <input type="hidden" name="_csrf" value="{{.CSRF}}">
+  <h2>Person hinzufügen</h2>
+  {{if .Avail}}
+  <div class="form-grid">
+    <div class="field"><label class="lbl" for="u">Benutzer</label><select id="u" name="user" required>{{range .Avail}}<option value="{{.ID}}">{{.Name}} ({{.Username}})</option>{{end}}</select></div>
+    <div class="field"><label class="lbl" for="r">Rolle</label><select id="r" name="role" required>{{range .Roles}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></div>
+  </div>
+  <div class="field"><span class="lbl">Zuständige Bereiche</span><span class="help">Nur relevant für Rollen, die auf eigene Bereiche beschränkt sind (z. B. Bar-Leitung).</span>
+    {{range .Areas}}<label class="checkrow"><input type="checkbox" name="area" value="{{.ID}}"> {{.Title}}</label>{{else}}<span class="muted small">Lege zuerst Bereiche an.</span>{{end}}</div>
+  <button class="btn primary">Hinzufügen</button>
+  {{else}}<p class="muted" style="margin:0">Alle Benutzer sind bereits Mitglied. Neue Konten legt ein Administrator unter Verwaltung an.</p>{{end}}
+</form>
+<div class="panel"><h2>Was die Rollen können</h2>
+  <ul class="alist">{{range .Roles}}<li style="display:block"><b>{{.Name}}</b> <span class="muted">{{.Description}}</span></li>{{end}}</ul></div>
+{{end}}

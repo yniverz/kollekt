@@ -1,0 +1,123 @@
+{{define "content"}}
+<div class="page-head">
+  <div><h1>Bar &amp; Verkauf</h1><p class="sub">Geplant für {{num (float .G)}} Gäste ({{.Scenario}}){{if .HasCalc}}. Die Gästezahl änderst du in der Kalkulation.{{end}}</p></div>
+</div>
+<div class="tabs" role="tablist">
+  <a href="{{.Base}}?tab=sell" class="{{if eq .Tab "sell"}}on{{end}}">Verkauf</a>
+  <a href="{{.Base}}?tab=buy" class="{{if eq .Tab "buy"}}on{{end}}">Einkaufsartikel</a>
+  <a href="{{.Base}}?tab=list" class="{{if eq .Tab "list"}}on{{end}}">Einkaufsliste</a>
+  <a href="{{.Base}}?tab=eval" class="{{if eq .Tab "eval"}}on{{end}}">Auswertung</a>
+</div>
+{{$next := printf "%s?tab=%s" .Base .Tab}}
+
+{{if eq .Tab "sell"}}
+  <div class="kpis">
+    <div class="kpi"><div class="l">Umsatz (Plan)</div><div class="v">{{eur .B.Revenue}}</div><div class="s">{{eur .B.PerGuest}} pro Gast</div></div>
+    <div class="kpi"><div class="l">Wareneinsatz</div><div class="v">{{eur .B.Ware}}</div><div class="s">{{if gt .B.Revenue 0.0}}{{pct (pctOf .B.Ware .B.Revenue)}} vom Umsatz{{else}}&nbsp;{{end}}</div></div>
+    <div class="kpi {{if neg (sub64 .B.Revenue .B.Ware)}}bad{{else}}good{{end}}"><div class="l">Rohertrag</div><div class="v">{{eur (sub64 .B.Revenue .B.Ware)}}</div><div class="s">vor Personal und Fixkosten</div></div>
+    <div class="kpi"><div class="l">Getränke pro Gast</div><div class="v">{{num .B.Drinks}}</div><div class="s">Summe „Portionen pro Gast“</div></div>
+  </div>
+  <div class="actions" style="margin-bottom:12px">{{if .CanEdit}}<a class="btn primary" data-modal href="/e/{{.Event.ID}}/m/bar_products/new?next={{$next}}">{{icon "plus"}} Verkaufsartikel</a>{{end}}</div>
+  {{if .B.Prods}}
+  <div class="tblwrap"><table class="tbl">
+    <thead><tr><th>Artikel</th><th>Kategorie</th><th class="num">Preis</th><th class="num">Kosten</th><th class="num">Marge</th><th class="num">Marge %</th><th class="num">Portionen/Gast</th><th class="num">Menge (Plan)</th><th class="num">Umsatz (Plan)</th></tr></thead>
+    <tbody>
+    {{$stand := "§"}}
+    {{range .B.Prods}}
+      {{if ne .Stand $stand}}{{$stand = .Stand}}<tr class="grp"><td colspan="9">{{.Stand}}</td></tr>{{end}}
+      <tr class="row" {{if $.CanEdit}}data-href="/e/{{$.Event.ID}}/m/bar_products/{{.R.ID}}?next={{urlq $next}}"{{end}}>
+        <td class="title"><a {{if $.CanEdit}}data-modal href="/e/{{$.Event.ID}}/m/bar_products/{{.R.ID}}?next={{$next}}"{{else}}href="#"{{end}}>{{.R.S "name"}}</a>{{if .Warn}} <span class="badge b-yellow">{{.Warn}}</span>{{end}}</td>
+        <td>{{.R.S "category"}}</td>
+        <td class="num">{{eur (.R.N "price")}}</td>
+        <td class="num">{{if .CostPer}}{{eur .CostPer}}{{else}}–{{end}}</td>
+        <td class="num {{if neg .Margin}}bad{{end}}">{{if .CostPer}}{{eur .Margin}}{{else}}–{{end}}</td>
+        <td class="num">{{if .CostPer}}{{pct .MarginPct}}{{else}}–{{end}}</td>
+        <td class="num">{{if .R.S "pp"}}{{num (.R.N "pp")}}{{else}}–{{end}}</td>
+        <td class="num">{{num .Qty}}</td>
+        <td class="num">{{eur .Rev}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table></div>
+  {{else}}<div class="tblwrap"><div class="empty">Noch keine Verkaufsartikel. Lege zuerst unter „Einkaufsartikel“ die Zutaten an und baue dann Rezepte.</div></div>{{end}}
+
+{{else if eq .Tab "buy"}}
+  <div class="actions" style="margin-bottom:12px">
+    {{if .CanEdit}}<a class="btn primary" data-modal href="/e/{{.Event.ID}}/m/bar_items/new?next={{$next}}">{{icon "plus"}} Einkaufsartikel</a>{{end}}
+  </div>
+  {{if .B.Items}}
+  <div class="tblwrap"><table class="tbl">
+    <thead><tr><th>Artikel</th><th>Kategorie</th><th>Gebinde</th><th class="num">Preis</th><th class="num">Kosten/Einheit</th><th class="num">Pfand</th><th class="num">Vorhanden</th><th>Verwendet</th><th></th></tr></thead>
+    <tbody>
+    {{range .B.Items}}
+      <tr class="row" {{if $.CanEdit}}data-href="/e/{{$.Event.ID}}/m/bar_items/{{.R.ID}}?next={{urlq $next}}"{{end}}>
+        <td class="title"><a {{if $.CanEdit}}data-modal href="/e/{{$.Event.ID}}/m/bar_items/{{.R.ID}}?next={{$next}}"{{else}}href="#"{{end}}>{{.R.S "name"}}</a></td>
+        <td>{{.R.S "category"}}</td><td>{{.R.S "pack"}}</td>
+        <td class="num">{{eur (.R.N "price")}}</td>
+        <td class="num">{{eur (unitCostOf .R)}} / {{.R.S "unit"}}</td>
+        <td class="num">{{if .R.S "deposit"}}{{eur (.R.N "deposit")}}{{else}}–{{end}}</td>
+        <td class="num">{{if .R.S "have"}}{{num (.R.N "have")}}{{else}}–{{end}}</td>
+        <td>{{if gt .Need 0.0}}{{num .Need}} {{.R.S "unit"}}{{else}}<span class="muted">nicht verwendet</span>{{end}}</td>
+        <td class="nowrap" style="text-align:right">{{if $.CanEdit}}<form method="post" action="/e/{{$.Event.ID}}/bar/tocatalog/{{.R.ID}}" style="display:inline"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="btn ghost sm" title="In den globalen Artikelstamm übernehmen bzw. dort aktualisieren">Im Stamm speichern</button></form>{{end}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table></div>
+  {{else}}<div class="tblwrap"><div class="empty">Noch keine Einkaufsartikel.</div></div>{{end}}
+  {{if and .CanEdit .Articles}}
+  <form method="post" action="/e/{{.Event.ID}}/bar/import" class="panel" style="margin-top:18px">
+    <input type="hidden" name="_csrf" value="{{.CSRF}}">
+    <h2>Aus dem Artikelstamm übernehmen</h2>
+    <p class="muted small">Die Werte werden kopiert. Spätere Preisänderungen im Stamm ändern dieses Event nicht.</p>
+    <div style="columns:2 260px;column-gap:24px">
+      {{range .Articles}}<label class="checkrow"><input type="checkbox" name="article" value="{{.ID}}"> <span>{{.S "name"}} <span class="muted small">{{.S "pack"}} · {{eur (.N "price")}}</span></span></label>{{end}}
+    </div>
+    <div class="form-actions"><button class="btn">Ausgewählte übernehmen</button></div>
+  </form>
+  {{end}}
+
+{{else if eq .Tab "list"}}
+  <div class="actions" style="margin-bottom:12px;justify-content:space-between">
+    {{if .CanEdit}}<form method="post" action="/e/{{.Event.ID}}/bar/settings" class="inp-suffix"><input type="hidden" name="_csrf" value="{{.CSRF}}"><label class="lbl" for="buf" style="margin:0">Sicherheitspuffer</label><input id="buf" type="number" min="0" max="100" step="any" name="buffer" value="{{num .B.Buffer}}" style="width:80px"><span>%</span><button class="btn sm">Übernehmen</button></form>{{else}}<span class="muted">Sicherheitspuffer {{num .B.Buffer}} %</span>{{end}}
+    <button class="btn" type="button" data-print>Drucken</button>
+  </div>
+  {{if .Sups}}
+    {{range .Sups}}
+    <div class="panel flat" style="margin-bottom:14px"><h2>{{.Name}}</h2>
+      <div class="tblwrap" style="border:0"><table class="tbl compact">
+        <thead><tr><th>Artikel</th><th>Gebinde</th><th class="num">Bedarf</th><th class="num">Gebinde (exakt)</th><th class="num">Vorhanden</th><th class="num">Einkaufen</th><th class="num">Kosten</th><th class="num">Pfand</th></tr></thead>
+        <tbody>
+        {{range .Items}}<tr><td class="title">{{.R.S "name"}}</td><td>{{.R.S "pack"}}</td><td class="num">{{num .Need}} {{.R.S "unit"}}</td><td class="num">{{printf "%.1f" .PacksRaw}}</td><td class="num">{{if .Have}}{{num .Have}}{{else}}–{{end}}</td><td class="num"><b>{{.Buy}}×</b></td><td class="num">{{eur .Cost}}{{if .R.B "returnable"}}<div class="muted small">nur Verbrauch</div>{{end}}</td><td class="num">{{if .Deposit}}{{eur .Deposit}}{{else}}–{{end}}</td></tr>{{end}}
+        <tr class="sum"><td colspan="6">Summe</td><td class="num">{{eur .Cost}}</td><td></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    {{end}}
+    <div class="kpis">
+      <div class="kpi"><div class="l">Einkauf gesamt</div><div class="v">{{eur .B.Purchase}}</div><div class="s">als Kosten gerechnet</div></div>
+      <div class="kpi"><div class="l">Pfand-Vorlage</div><div class="v">{{eur .B.Deposit}}</div><div class="s">kommt bei Rückgabe zurück</div></div>
+    </div>
+  {{else}}<div class="tblwrap"><div class="empty">Die Einkaufsliste entsteht aus den Rezepten und der Gästezahl. Lege Verkaufsartikel mit Rezept und „Portionen pro Gast“ an.</div></div>{{end}}
+
+{{else}}
+  <div class="kpis">
+    <div class="kpi"><div class="l">Umsatz (Plan)</div><div class="v">{{eur .B.Revenue}}</div><div class="s">&nbsp;</div></div>
+    <div class="kpi"><div class="l">Umsatz (Ist)</div><div class="v">{{if .B.HasSold}}{{eur .B.SoldRev}}{{else}}–{{end}}</div><div class="s">{{if .B.HasSold}}{{if gt .B.Revenue 0.0}}{{pct (pctOf .B.SoldRev .B.Revenue)}} vom Plan{{end}}{{else}}Noch keine Verkaufszahlen{{end}}</div></div>
+    <div class="kpi"><div class="l">Wareneinsatz (Plan)</div><div class="v">{{eur .B.Ware}}</div><div class="s">&nbsp;</div></div>
+    <div class="kpi"><div class="l">Einkauf (Plan)</div><div class="v">{{eur .B.Purchase}}</div><div class="s">inkl. Puffer, ohne Pfand</div></div>
+  </div>
+  {{if .B.Prods}}
+  <div class="tblwrap"><table class="tbl">
+    <thead><tr><th>Artikel</th><th class="num">Plan-Menge</th><th class="num">Ist verkauft</th><th class="num">Abweichung</th><th class="num">Umsatz Plan</th><th class="num">Umsatz Ist</th><th class="num">Marge/Stk.</th></tr></thead>
+    <tbody>
+    {{$stand := "§"}}
+    {{range .B.Prods}}
+      {{if ne .Stand $stand}}{{$stand = .Stand}}<tr class="grp"><td colspan="7">{{.Stand}}</td></tr>{{end}}
+      <tr><td class="title">{{.R.S "name"}}</td><td class="num">{{num .Qty}}</td><td class="num">{{if .HasSold}}{{num .Sold}}{{else}}–{{end}}</td><td class="num {{if .HasSold}}{{if lt .Sold .Qty}}bad{{else}}good{{end}}{{end}}">{{if .HasSold}}{{num (sub64 .Sold .Qty)}}{{else}}–{{end}}</td><td class="num">{{eur .Rev}}</td><td class="num">{{if .HasSold}}{{eur .SoldRev}}{{else}}–{{end}}</td><td class="num">{{if .CostPer}}{{eur .Margin}}{{else}}–{{end}}</td></tr>
+    {{end}}
+    </tbody>
+  </table></div>
+  <p class="muted small" style="margin-top:8px">Verkaufszahlen trägst du pro Verkaufsartikel unter „Ist verkauft“ ein.</p>
+  {{else}}<div class="tblwrap"><div class="empty">Noch keine Daten.</div></div>{{end}}
+{{end}}
+{{end}}
