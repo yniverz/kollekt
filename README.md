@@ -43,13 +43,13 @@ docker compose up -d --build
 
 Danach `http://localhost:8080` öffnen. Beim ersten Aufruf erscheint die Einrichtung für das Admin-Konto. Alternativ legen die Variablen `KOLLEKT_ADMIN_USER` und `KOLLEKT_ADMIN_PASSWORD` das Konto beim ersten Start an.
 
-**Portainer:** Stacks → Add stack → *Repository* (dieses Repo, Compose-Pfad `docker-compose.yml`) oder den Inhalt der Datei in den *Web editor* kopieren. Bei privatem Repo ein GitHub-Token hinterlegen. Alternativ das von GitHub Actions gebaute Image `ghcr.io/yniverz/kollekt:latest` verwenden und in der Compose-Datei `build: .` durch `image: ghcr.io/yniverz/kollekt:latest` ersetzen.
+**Portainer:** Stacks → Add stack → *Repository*, Repository URL `https://github.com/yniverz/kollekt`, Reference `refs/heads/main`, Compose-Pfad `docker-compose.yml`. Portainer baut das Image dann selbst (das Repo ist öffentlich, ein Token ist nicht nötig). Alternativ den Inhalt der Compose-Datei in den *Web editor* kopieren. Wer lieber ein fertiges Image zieht: GitHub Actions veröffentlicht `ghcr.io/yniverz/kollekt:latest` (amd64 und arm64). Dazu das Paket einmalig unter GitHub → Profil → Packages → kollekt → *Package settings* → *Change visibility* auf „Public“ stellen und in der Compose-Datei `build: .` durch `image: ghcr.io/yniverz/kollekt:latest` ersetzen.
 
 | Variable | Standard | Bedeutung |
 |---|---|---|
 | `KOLLEKT_DATA` | `/data` | Ordner mit der SQLite-Datenbank (als Volume einbinden) |
 | `KOLLEKT_ADDR` | `:8080` | Listen-Adresse |
-| `KOLLEKT_SECURE_COOKIES` | leer | `1` erzwingt Secure-Cookies. Hinter HTTPS-Proxy (`X-Forwarded-Proto: https`) wird das automatisch erkannt |
+| `KOLLEKT_SECURE_COOKIES` | leer | `1` erzwingt Secure-Cookies (nur mit HTTPS!). Hinter HTTPS-Proxy (`X-Forwarded-Proto: https`) wird das automatisch erkannt. Bei reinem HTTP leer lassen, sonst klappt der Login nicht |
 | `KOLLEKT_ADMIN_USER` / `KOLLEKT_ADMIN_PASSWORD` | leer | Admin-Konto beim ersten Start anlegen (Passwort 10 bis 72 Zeichen) |
 | `KOLLEKT_TRUST_PROXY` | leer | `1` übernimmt die Client-IP aus `X-Forwarded-For` (nur hinter eigenem Proxy, sonst fälschbar) |
 | `KOLLEKT_DEMO_DATA` | leer | `1` legt in einer leeren Installation ein Demo-Event mit frei erfundenen Daten an |
