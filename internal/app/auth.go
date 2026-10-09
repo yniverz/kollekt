@@ -2,6 +2,7 @@ package app
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
@@ -61,6 +62,28 @@ func randToken(n int) string {
 	return hex.EncodeToString(b)
 }
 
+// dummyHash keeps login timing constant for unknown usernames.
+var dummyHash, _ = bcrypt.GenerateFromPassword([]byte("kollekt-dummy"), 11)
+
+// trustProxy makes clientIP honor X-Forwarded-For (only enable behind a reverse proxy).
+var trustProxy bool
+
+func hashToken(tok string) string {
+	h := sha256.Sum256([]byte(tok))
+	return hex.EncodeToString(h[:])
+}
+
+// checkPassword returns a user-facing message if the password is unacceptable.
+func checkPassword(pw string) string {
+	if len(pw) < 10 {
+		return "Das Passwort braucht mindestens 10 Zeichen."
+	}
+	if len(pw) > 72 {
+		return "Das Passwort darf höchstens 72 Zeichen lang sein."
+	}
+	return ""
+}
+
 func hashPW(pw string) (string, error) {
 	b, err := bcrypt.GenerateFromPassword([]byte(pw), 11)
 	return string(b), err
@@ -115,7 +138,7 @@ func (a *App) checkLogin(username, pw string) (*User, error) {
 	err := a.db.QueryRow("SELECT id, pass_hash FROM users WHERE username=?", strings.TrimSpace(username)).Scan(&id, &hash)
 	if err != nil {
 		// constant-ish time to avoid user enumeration
-		_ = bcrypt.CompareHashAndPassword([]byte("$2a$11$0000000000000000000000000000000000000000000000000000"), []byte(pw))
+		_ = bcrypt.CompareHashAndPassword(dummyHash, []byte(pw))
 		return nil, errBadLogin
 	}
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(pw)) != nil {
@@ -163,7 +186,7 @@ type Session struct {
 func (a *App) newSession(userID int64) (string, error) {
 	tok := randToken(32)
 	_, err := a.db.Exec("INSERT INTO sessions(token,user_id,csrf,expires_at) VALUES(?,?,?,?)",
-		tok, userID, randToken(16), time.Now().Add(30*24*time.Hour).Unix())
+		hashToken(tok), userID, randToken(16), time.Now().Add(30*24*time.Hour).Unix())
 	return tok, err
 }
 
@@ -173,12 +196,12 @@ func (a *App) session(token string) *Session {
 	}
 	var uid, exp int64
 	var csrf string
-	err := a.db.QueryRow("SELECT user_id,csrf,expires_at FROM sessions WHERE token=?", token).Scan(&uid, &csrf, &exp)
+	err := a.db.QueryRow("SELECT user_id,csrf,expires_at FROM sessions WHERE token=?", hashToken(token)).Scan(&uid, &csrf, &exp)
 	if err != nil {
 		return nil
 	}
 	if exp < time.Now().Unix() {
-		_, _ = a.db.Exec("DELETE FROM sessions WHERE token=?", token)
+		_, _ = a.db.Exec("DELETE FROM sessions WHERE token=?", hashToken(token))
 		return nil
 	}
 	u := a.user(uid)
@@ -229,7 +252,7 @@ func (t *throttle) hit(key string) {
 }
 
 func clientIP(r *http.Request) string {
-	if f := r.Header.Get("X-Forwarded-For"); f != "" {
+	if f := r.Header.Get("X-Forwarded-For"); f != "" && trustProxy {
 		return strings.TrimSpace(strings.Split(f, ",")[0])
 	}
 	h, _, err := net.SplitHostPort(r.RemoteAddr)

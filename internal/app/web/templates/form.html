@@ -26,6 +26,18 @@
     {{if .CanDelete}}<button class="btn danger" type="submit" form="delform" data-confirm="Wirklich löschen?">{{icon "trash"}} Löschen</button>{{end}}
   </div>
 </form>
+{{if .CanAttach}}
+<div class="hr"></div>
+<h3 style="margin-bottom:8px">Anhänge</h3>
+{{if .Files}}<ul class="alist">{{range .Files}}<li><span>{{icon "clip"}} <a href="{{.URL}}">{{.Name}}</a> <span class="muted small">{{.Size}} · {{.Uploaded}}</span></span>
+  <form method="post" action="{{.DelURL}}" style="margin-left:auto"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><input type="hidden" name="next" value="{{$.Next}}"><button class="btn ghost sm" data-confirm="Anhang entfernen?" title="Entfernen">{{icon "x"}}</button></form></li>{{end}}</ul>
+{{else}}<p class="muted small" style="margin:0 0 8px">Noch nichts angehängt. Verträge, Rechnungen, Bescheide, Pläne …</p>{{end}}
+<form method="post" action="{{.UploadURL}}" enctype="multipart/form-data" data-plain class="inp-suffix">
+  <input type="hidden" name="_csrf" value="{{.CSRF}}"><input type="hidden" name="next" value="{{.Next}}">
+  <input type="file" name="file" multiple required aria-label="Dateien auswählen"><button class="btn sm">Hochladen</button>
+</form>
+<p class="muted small" style="margin:4px 0 0">Bis 25 MB pro Datei, höchstens 20 Anhänge. Dateien werden nur zum Download ausgeliefert.</p>
+{{else if and (not .IsNew) (not .CanAttach)}}{{else if .IsNew}}{{if .M}}{{if not .M.NoAttach}}{{if not .M.Hidden}}<p class="muted small" style="margin-top:14px">Anhänge lassen sich nach dem ersten Speichern hinzufügen.</p>{{end}}{{end}}{{end}}{{end}}
 {{if .CanDelete}}<form method="post" action="{{.DeleteURL}}" id="delform"><input type="hidden" name="_csrf" value="{{.CSRF}}"><input type="hidden" name="next" value="{{.Next}}"></form>{{end}}
 {{end}}
 
@@ -37,7 +49,7 @@
   {{else}}
     <label class="lbl" for="f_{{$f.Key}}">{{$f.Label}}{{if $f.Required}} *{{end}}</label>
     {{if eq (printf "%s" $f.Type) "textarea"}}<textarea id="f_{{$f.Key}}" name="{{$f.Key}}">{{.Value}}</textarea>
-    {{else if eq (printf "%s" $f.Type) "select"}}<select id="f_{{$f.Key}}" name="{{$f.Key}}">{{if not $f.Required}}<option value=""></option>{{end}}{{range $f.Opts}}<option value="{{.V}}" {{if eq .V $.Value}}selected{{end}}>{{.L}}</option>{{end}}</select>
+    {{else if eq (printf "%s" $f.Type) "select"}}<select id="f_{{$f.Key}}" name="{{$f.Key}}">{{if not $f.Required}}<option value="">{{$f.BlankLabel}}</option>{{end}}{{range $f.Opts}}<option value="{{.V}}" {{if eq .V $.Value}}selected{{end}}>{{.L}}</option>{{end}}</select>
     {{else if eq (printf "%s" $f.Type) "ref"}}<select id="f_{{$f.Key}}" name="{{$f.Key}}"><option value="">{{if $f.Required}}Bitte wählen …{{else}}–{{end}}</option>{{range .Opts}}<option value="{{.ID}}" {{if .Sel}}selected{{end}}>{{.Title}}</option>{{end}}</select>
     {{else if eq (printf "%s" $f.Type) "date"}}<input id="f_{{$f.Key}}" type="date" name="{{$f.Key}}" value="{{.Value}}">
     {{else if eq (printf "%s" $f.Type) "datetime"}}<input id="f_{{$f.Key}}" type="datetime-local" name="{{$f.Key}}" value="{{.Value}}">

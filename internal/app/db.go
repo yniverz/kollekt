@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -76,6 +77,19 @@ CREATE TABLE IF NOT EXISTS templates (
   payload TEXT NOT NULL,
   builtin INTEGER NOT NULL DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS files (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id INTEGER NOT NULL DEFAULT 0,
+  module TEXT NOT NULL,
+  record_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  size INTEGER NOT NULL DEFAULT 0,
+  stored TEXT NOT NULL,
+  created_by INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_files_rec ON files(record_id);
+CREATE INDEX IF NOT EXISTS idx_files_event ON files(event_id);
 CREATE TABLE IF NOT EXISTS audit (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   ts INTEGER NOT NULL,
@@ -99,6 +113,9 @@ func openDB(dir string) (*sql.DB, error) {
 	db.SetMaxOpenConns(8)
 	if _, err := db.Exec(schemaSQL); err != nil {
 		return nil, fmt.Errorf("schema: %w", err)
+	}
+	for _, suffix := range []string{"", "-wal", "-shm"} {
+		_ = os.Chmod(path+suffix, 0o600) // data is private: owner only
 	}
 	return db, nil
 }
@@ -192,7 +209,10 @@ func (a *App) saveRec(r *Rec) error {
 	return err
 }
 
-func (a *App) delRec(id int64) { _, _ = a.db.Exec("DELETE FROM records WHERE id=?", id) }
+func (a *App) delRec(id int64) {
+	a.removeFilesOfRecord(id)
+	_, _ = a.db.Exec("DELETE FROM records WHERE id=?", id)
+}
 
 func (a *App) logAudit(userID, eventID int64, module string, recID int64, action, title string) {
 	_, _ = a.db.Exec("INSERT INTO audit(ts,user_id,event_id,module,rec_id,action,title) VALUES(?,?,?,?,?,?,?)",
@@ -327,6 +347,7 @@ func (a *App) saveEvent(e *Event) error {
 }
 
 func (a *App) deleteEvent(id int64) {
+	a.removeFilesOfEvent(id)
 	_, _ = a.db.Exec("DELETE FROM records WHERE event_id=?", id)
 	_, _ = a.db.Exec("DELETE FROM audit WHERE event_id=?", id)
 	_, _ = a.db.Exec("DELETE FROM events WHERE id=?", id)

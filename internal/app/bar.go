@@ -69,19 +69,25 @@ func (c *C) recipeItemsJSON() string {
 	return string(b)
 }
 
-// unitCost = purchase price per used unit (incl. waste).
-func unitCost(r *Rec) float64 {
+// unitCostOf = price per used unit (incl. waste) for a given (already converted) pack price.
+func unitCostOf(price float64, r *Rec) float64 {
 	eff := r.N("content") * (1 - r.N("waste")/100)
 	if eff <= 0 {
 		return 0
 	}
-	return r.N("price") / eff
+	return price / eff
 }
+
+func (c *C) unitCost(r *Rec) float64 { return unitCostOf(c.packPrice(r), r) }
+
+// packPrice is the pack price in the event's calculation basis (net or gross).
+func (c *C) packPrice(r *Rec) float64 { return c.amt(r.N("price"), r, false) }
 
 type BarProd struct {
 	R         *Rec
 	Stand     string
 	Qty       float64
+	Price     float64
 	Rev       float64
 	CostPer   float64
 	Cost      float64
@@ -103,6 +109,8 @@ type BarItem struct {
 	Cost     float64
 	Deposit  float64
 	Supplier string
+	UnitCost float64
+	Price    float64
 }
 
 type StandSum struct {
@@ -156,11 +164,12 @@ func (c *C) bar(G int) *BarResult {
 		}
 		for _, l := range bp.Recipe {
 			if it := items[l.I]; it != nil {
-				bp.CostPer += l.Q * unitCost(it)
+				bp.CostPer += l.Q * c.unitCost(it)
 				need[l.I] += l.Q * bp.Qty
 			}
 		}
-		price := p.N("price")
+		price := c.saleAmt(p.N("price"), p)
+		bp.Price = price
 		bp.Rev = bp.Qty * price
 		bp.Cost = bp.Qty * bp.CostPer
 		bp.Margin = price - bp.CostPer
@@ -195,7 +204,7 @@ func (c *C) bar(G int) *BarResult {
 	}
 	for _, it := range c.Recs("bar_items") {
 		n := need[it.ID]
-		bi := &BarItem{R: it, Need: n, Have: it.N("have")}
+		bi := &BarItem{R: it, Need: n, Have: it.N("have"), UnitCost: c.unitCost(it), Price: c.packPrice(it)}
 		eff := it.N("content") * (1 - it.N("waste")/100)
 		if eff > 0 {
 			bi.PacksRaw = n / eff
@@ -207,9 +216,9 @@ func (c *C) bar(G int) *BarResult {
 		}
 		bi.Buy = int(buy)
 		if it.B("returnable") {
-			bi.Cost = math.Max(0, bi.PacksRaw-bi.Have) * it.N("price")
+			bi.Cost = math.Max(0, bi.PacksRaw-bi.Have) * bi.Price
 		} else {
-			bi.Cost = float64(bi.Buy) * it.N("price")
+			bi.Cost = float64(bi.Buy) * bi.Price
 		}
 		bi.Deposit = float64(bi.Buy) * it.N("deposit")
 		bi.Supplier = c.RefTitle("contacts", it.I("supplier"))
@@ -292,7 +301,7 @@ func (c *C) handleBar(w http.ResponseWriter, r *http.Request) {
 	data := map[string]any{
 		"Title": "Bar & Verkauf", "Nav": c.eventNav("bar"), "Tab": tab, "B": b, "G": G, "Articles": articles, "Sups": sups,
 		"CanEdit": c.CanEdit("bar"), "Unused": unused, "Scenario": cs.Scenarios[cs.Baseline].Name, "Base": "/e/" + itoa(c.Event.ID) + "/bar",
-		"HasCalc": c.Event.Has("calc"),
+		"HasCalc": c.Event.Has("calc"), "Basis": c.basisLabel(),
 	}
 	c.Page("bar.html", data)
 }

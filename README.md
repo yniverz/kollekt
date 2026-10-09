@@ -21,6 +21,7 @@ Kollekt ist **kein Ticketsystem und keine Kasse**. Es dient der Planung und dem 
 | **Personal** | Schichtplan mit offenen Plätzen, Stunden und Kosten pro Bereich/Person, Doppelbelegungen |
 | **Ablaufplan** | Programm von Aufbau bis Abbau, Line-up wird automatisch eingeblendet |
 | **Material** | Bedarf, Beschaffung (eigen/geliehen/gemietet), Status, Kosten |
+| **Anhänge** | An fast jedem Eintrag (Rechnung, Vertrag, Bescheid, Plan …): bis 25 MB pro Datei, höchstens 20 pro Eintrag, Büroklammer-Hinweis in der Liste |
 | **Stammdaten** | Kontakte, Locations und Artikelstamm gelten für alle Events: Events werden aus diesen Bausteinen zusammengeklickt |
 
 Die Übersicht jedes Events zeigt Kennzahlen, Warnungen (überfällige Aufgaben, verstrichene Antragsfristen, Verlust, Kapazität, offene Schichten, Artikel unter Einkaufspreis, Überschneidungen) und die nächsten Fristen.
@@ -48,9 +49,11 @@ Danach `http://localhost:8080` öffnen. Beim ersten Aufruf erscheint die Einrich
 | `KOLLEKT_DATA` | `/data` | Ordner mit der SQLite-Datenbank (als Volume einbinden) |
 | `KOLLEKT_ADDR` | `:8080` | Listen-Adresse |
 | `KOLLEKT_SECURE_COOKIES` | leer | `1` erzwingt Secure-Cookies. Hinter HTTPS-Proxy (`X-Forwarded-Proto: https`) wird das automatisch erkannt |
-| `KOLLEKT_ADMIN_USER` / `KOLLEKT_ADMIN_PASSWORD` | leer | Admin-Konto beim ersten Start anlegen (Passwort mindestens 10 Zeichen) |
+| `KOLLEKT_ADMIN_USER` / `KOLLEKT_ADMIN_PASSWORD` | leer | Admin-Konto beim ersten Start anlegen (Passwort 10 bis 72 Zeichen) |
+| `KOLLEKT_TRUST_PROXY` | leer | `1` übernimmt die Client-IP aus `X-Forwarded-For` (nur hinter eigenem Proxy, sonst fälschbar) |
+| `KOLLEKT_DEMO_DATA` | leer | `1` legt in einer leeren Installation ein Demo-Event mit frei erfundenen Daten an |
 
-**Backup:** Das Volume `/data` enthält alles (`kollekt.db`). Im laufenden Betrieb am besten mit `sqlite3 kollekt.db ".backup backup.db"` sichern oder den Container kurz stoppen.
+**Backup:** Das Volume `/data` enthält alles (`kollekt.db` und der Ordner `files/` mit den Anhängen). Im laufenden Betrieb am besten mit `sqlite3 kollekt.db ".backup backup.db"` sichern oder den Container kurz stoppen.
 
 **HTTPS:** Kollekt spricht selbst nur HTTP. Für Zugriff übers Internet einen Reverse Proxy (Caddy, Traefik, nginx Proxy Manager) davorsetzen.
 
@@ -69,9 +72,22 @@ Go 1.26, keine CGO-Abhängigkeit (SQLite über `modernc.org/sqlite`), Oberfläch
 * `calc.go` und `bar.go` enthalten die Finanz- und Bar-Berechnung, `extras.go` die modulspezifischen Ansichten (Zeitleiste, Besetzung, Bereichskarten).
 * `seed.go` enthält die mitgelieferten Rollen und Event-Vorlagen. Preise in den Bar-Vorlagen sind Beispielwerte.
 
+## Netto und Brutto
+
+* Pro Event stellst du unter *Einstellungen → Netto / Brutto* ein, in welcher Basis ausgewertet wird (Standard: **netto**), wie Kosten standardmäßig erfasst werden und welcher USt-Satz Standard ist (19 %).
+* Einzelne Posten (Budget, Line-up, Material, Location, Einkaufsartikel) können abweichend **netto oder brutto** mit eigenem Satz (0 / 7 / 19 %) erfasst werden. Kleine Lieferanten ohne Umsatzsteuer: „Brutto“ mit 0 %. Alles wird in die Auswertungsbasis umgerechnet.
+* Verkaufspreise (Bar) und Eintritt sind immer Brutto-Preise, so wie sie auf Karte und Ticket stehen. In der Netto-Auswertung wird die USt herausgerechnet.
+* Pfand zählt nicht als Kosten. Er wird in der Einkaufsliste als Vorlage ausgewiesen. Vorsteuer, Zahllast und Steuererklärung sind nicht Teil von Kollekt.
+
+## Vorlagen für Karlsruhe / Baden-Württemberg
+
+Die mitgelieferten Genehmigungslisten orientieren sich an Karlsruhe und Baden-Württemberg (Ordnungs- und Bürgeramt, Landesgaststättengesetz, Fliegende Bauten, Sicherheitskonzept, GEMA, KSK …) und verlinken den [Veranstaltungsleitfaden der Stadt](https://web1.karlsruhe.de/service/Formulare/ordnungsamt/OA3_Veranstaltungsleitfaden_Karlsruhe.pdf). **Das sind Gedächtnisstützen ohne Gewähr, keine Rechtsberatung.** Fristen, Formulare und Zuständigkeiten bitte direkt bei der Stadt bestätigen. Preise in den Bar-Vorlagen sind Beispielwerte.
+
 ## Hinweise zur Rechnung
 
-* Beträge werden brutto erfasst. In der Kalkulation lässt sich ein Umsatzsteuersatz auf Einnahmen (Eintritt, Verkauf) einstellen, Vorsteuer wird nicht gerechnet.
-* Pfand zählt nicht als Kosten. Er wird in der Einkaufsliste als Vorlage ausgewiesen.
 * Kommissionsware („ungeöffnet zurückgebbar“) kostet nur den Verbrauch, alles andere ganze Gebinde inklusive Sicherheitspuffer.
 * Break-even und Szenarien rechnen mit der Planungsbasis der Kalkulation. Ist-Werte (Beträge, Eintritt, verkaufte Portionen) ersetzen in der Prognose die Planwerte.
+
+## Sicherheit und Datenschutz
+
+Siehe [SECURITY.md](SECURITY.md). Kurz: keine Zugangsdaten im Repository, Passwörter mit bcrypt, Sitzungen gehasht, CSRF-Schutz, serverseitige Rechteprüfung, strikte CSP, Anhänge nur als Download. Alle Beispieldaten (Vorlagen, Demo) sind frei erfunden.

@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
+	"time"
 )
 
 func (a *App) routes() {
@@ -25,7 +26,7 @@ func (a *App) routes() {
 	mux.HandleFunc("GET /setup", a.public(a.setupPage))
 	mux.HandleFunc("POST /setup", a.public(a.setupPost))
 	mux.HandleFunc("POST /logout", a.auth(func(c *C) {
-		_, _ = a.db.Exec("DELETE FROM sessions WHERE token=?", c.Sess.Token)
+		_, _ = a.db.Exec("DELETE FROM sessions WHERE token=?", hashToken(c.Sess.Token))
 		a.setCookie(c.W, c.R, "", -1)
 		c.Redirect("/login")
 	}))
@@ -63,6 +64,9 @@ func (a *App) routes() {
 	mux.HandleFunc("POST /e/{eid}/m/{mod}/{rid}", a.evt(func(c *C) { c.handleSave(c.W, c.R) }))
 	mux.HandleFunc("POST /e/{eid}/m/{mod}/{rid}/delete", a.evt(func(c *C) { c.handleDelete(c.W, c.R) }))
 	mux.HandleFunc("POST /e/{eid}/m/{mod}/{rid}/quick", a.evt(func(c *C) { c.handleQuick(c.W, c.R) }))
+	mux.HandleFunc("POST /e/{eid}/m/{mod}/{rid}/files", a.evt(func(c *C) { c.handleUpload(c.W, c.R) }))
+	mux.HandleFunc("GET /e/{eid}/files/{fid}", a.evt(func(c *C) { c.handleDownload(c.W, c.R) }))
+	mux.HandleFunc("POST /e/{eid}/files/{fid}/delete", a.evt(func(c *C) { c.handleFileDelete(c.W, c.R) }))
 	mux.HandleFunc("POST /e/{eid}/m/{mod}/{rid}/do/{act}", a.evt(func(c *C) { c.handleAction(c.W, c.R) }))
 
 	// master data
@@ -72,6 +76,10 @@ func (a *App) routes() {
 	mux.HandleFunc("GET /g/{mod}/{rid}", a.auth(func(c *C) { c.handleForm(c.W, c.R) }))
 	mux.HandleFunc("POST /g/{mod}/{rid}", a.auth(func(c *C) { c.handleSave(c.W, c.R) }))
 	mux.HandleFunc("POST /g/{mod}/{rid}/delete", a.auth(func(c *C) { c.handleDelete(c.W, c.R) }))
+
+	mux.HandleFunc("POST /g/{mod}/{rid}/files", a.auth(func(c *C) { c.handleUpload(c.W, c.R) }))
+	mux.HandleFunc("GET /gf/{fid}", a.auth(func(c *C) { c.handleDownload(c.W, c.R) }))
+	mux.HandleFunc("POST /gf/{fid}/delete", a.auth(func(c *C) { c.handleFileDelete(c.W, c.R) }))
 
 	// admin
 	mux.HandleFunc("GET /admin/users", a.admin(a.usersPage))
@@ -119,7 +127,7 @@ func (a *App) loginPost(c *C) {
 	r := c.R
 	user := strings.TrimSpace(r.FormValue("username"))
 	key := clientIP(r) + "|" + strings.ToLower(user)
-	if !loginThrottle.allow(key, 8, 10*60e9) || !loginThrottle.allow(clientIP(r), 40, 10*60e9) {
+	if !loginThrottle.allow(key, 8, 10*time.Minute) || !loginThrottle.allow(clientIP(r), 40, 10*time.Minute) || !loginThrottle.allow("u|"+strings.ToLower(user), 30, 10*time.Minute) {
 		c.W.WriteHeader(http.StatusTooManyRequests)
 		c.renderTpl("login.html", map[string]any{"Title": "Anmelden", "Error": "Zu viele Versuche. Bitte in ein paar Minuten erneut probieren.", "Username": user, "Next": r.FormValue("next")})
 		return
@@ -128,6 +136,7 @@ func (a *App) loginPost(c *C) {
 	if err != nil {
 		loginThrottle.hit(key)
 		loginThrottle.hit(clientIP(r))
+		loginThrottle.hit("u|" + strings.ToLower(user))
 		c.W.WriteHeader(http.StatusUnauthorized)
 		c.renderTpl("login.html", map[string]any{"Title": "Anmelden", "Error": err.Error(), "Username": user, "Next": r.FormValue("next")})
 		return
@@ -164,8 +173,8 @@ func (a *App) setupPost(c *C) {
 		fail("Name und Benutzername sind Pflicht.")
 		return
 	}
-	if len(pw) < 10 {
-		fail("Das Passwort sollte mindestens 10 Zeichen haben.")
+	if msg := checkPassword(pw); msg != "" {
+		fail(msg)
 		return
 	}
 	if pw != r.FormValue("password2") {
@@ -190,14 +199,17 @@ func (a *App) accountPost(c *C) {
 		return
 	}
 	pw := r.FormValue("new")
-	if len(pw) < 10 || pw != r.FormValue("new2") {
+	if msg := checkPassword(pw); msg != "" || pw != r.FormValue("new2") {
+		if msg == "" {
+			msg = "Die beiden Passwörter stimmen nicht überein."
+		}
 		c.W.WriteHeader(422)
-		c.Page("account.html", map[string]any{"Title": "Mein Konto", "Error": "Das neue Passwort braucht mindestens 10 Zeichen und muss zweimal gleich eingegeben werden."})
+		c.Page("account.html", map[string]any{"Title": "Mein Konto", "Error": msg})
 		return
 	}
 	h, _ := hashPW(pw)
 	_, _ = a.db.Exec("UPDATE users SET pass_hash=? WHERE id=?", h, c.User.ID)
-	_, _ = a.db.Exec("DELETE FROM sessions WHERE user_id=? AND token<>?", c.User.ID, c.Sess.Token)
+	_, _ = a.db.Exec("DELETE FROM sessions WHERE user_id=? AND token<>?", c.User.ID, hashToken(c.Sess.Token))
 	c.setFlash("Passwort geändert.")
 	c.Redirect("/account")
 }

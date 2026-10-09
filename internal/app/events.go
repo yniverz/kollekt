@@ -112,7 +112,7 @@ func (c *C) renderSettings(form map[string]string, errMsg string) {
 	}
 	c.Page("settings.html", map[string]any{
 		"Title": "Event-Einstellungen", "Nav": c.eventNav(""), "Form": form, "Statuses": eventStatuses, "Mods": mods,
-		"Locations": c.A.locationOptions(e.LocationID), "Error": errMsg,
+		"Locations": c.A.locationOptions(e.LocationID), "Error": errMsg, "Tax": c.tax(),
 	})
 }
 
@@ -147,6 +147,10 @@ func (a *App) settingsSave(c *C) {
 		if l := a.rec(lid); l != nil && l.Module == "locations" {
 			e.LocationID = lid
 		}
+	}
+	tx := TaxSettings{Basis: r.FormValue("tax_basis"), Entry: r.FormValue("tax_entry"), VAT: parseNum(r.FormValue("tax_vat"))}
+	if (tx.Basis == "net" || tx.Basis == "gross") && (tx.Entry == "net" || tx.Entry == "gross") && tx.VAT >= 0 && tx.VAT <= 100 {
+		e.setting("tax", tx)
 	}
 	var mods []string
 	for _, m := range eventModules() {

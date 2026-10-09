@@ -53,7 +53,7 @@
 {{end}}
 
 {{define "cell"}}{{$c := .C}}
-{{if eq $c.Kind "title"}}<td class="title">{{if .CanEdit}}<a data-modal href="{{.Base}}/{{.Row.R.ID}}?next={{.Next}}">{{$c.Text}}</a>{{else}}{{$c.Text}}{{end}}</td>
+{{if eq $c.Kind "title"}}<td class="title">{{if .CanEdit}}<a data-modal href="{{.Base}}/{{.Row.R.ID}}?next={{.Next}}">{{$c.Text}}</a>{{else}}{{$c.Text}}{{end}}{{if $c.N}} <span class="muted small clipn" title="{{$c.N}} Anhang/Anhänge">{{icon "clip"}}{{$c.N}}</span>{{end}}</td>
 {{else if eq $c.Kind "badge"}}<td>{{badge $c.Text $c.Color}}</td>
 {{else if eq $c.Kind "quick"}}<td><select class="quick" data-color="{{optColor $c.Opts $c.Val}}" data-field="{{$c.Key}}" data-url="{{.Base}}/{{.Row.R.ID}}/quick" aria-label="Status ändern">{{range $c.Opts}}<option value="{{.V}}" data-color="{{.Color}}" {{if eq .V $c.Val}}selected{{end}}>{{.L}}</option>{{end}}</select></td>
 {{else if eq $c.Kind "money"}}<td class="num">{{$c.Text}}</td>

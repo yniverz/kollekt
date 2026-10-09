@@ -24,8 +24,8 @@ func (a *App) userCreate(c *C) {
 		fail("Name und Benutzername sind Pflicht.")
 		return
 	}
-	if len(pw) < 10 {
-		fail("Das Passwort braucht mindestens 10 Zeichen.")
+	if msg := checkPassword(pw); msg != "" {
+		fail(msg)
 		return
 	}
 	if _, err := a.createUser(user, name, pw, r.FormValue("admin") != "", r.FormValue("create") != "", r.FormValue("master") != ""); err != nil {
@@ -71,8 +71,8 @@ func (a *App) userEditSave(c *C) {
 		}
 	}
 	if pw := r.FormValue("password"); pw != "" {
-		if len(pw) < 10 {
-			c.setFlash("Das neue Passwort braucht mindestens 10 Zeichen. Übrige Änderungen wurden gespeichert.")
+		if msg := checkPassword(pw); msg != "" {
+			c.setFlash(msg + " Übrige Änderungen wurden gespeichert.")
 			c.Redirect("/admin/users/" + itoa(u.ID))
 			return
 		}

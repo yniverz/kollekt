@@ -24,6 +24,7 @@ type Config struct {
 	SecureCookies bool
 	AdminUser     string
 	AdminPass     string
+	TrustProxy    bool
 }
 
 func ConfigFromEnv() Config {
@@ -33,6 +34,7 @@ func ConfigFromEnv() Config {
 		SecureCookies: env("KOLLEKT_SECURE_COOKIES", "") == "1",
 		AdminUser:     os.Getenv("KOLLEKT_ADMIN_USER"),
 		AdminPass:     os.Getenv("KOLLEKT_ADMIN_PASSWORD"),
+		TrustProxy:    env("KOLLEKT_TRUST_PROXY", "") == "1",
 	}
 }
 
@@ -52,9 +54,10 @@ type App struct {
 
 // Run starts the server.
 func Run(cfg Config) error {
-	if err := os.MkdirAll(cfg.DataDir, 0o755); err != nil {
+	if err := os.MkdirAll(cfg.DataDir, 0o700); err != nil {
 		return err
 	}
+	trustProxy = cfg.TrustProxy
 	db, err := openDB(cfg.DataDir)
 	if err != nil {
 		return err
@@ -65,6 +68,9 @@ func Run(cfg Config) error {
 	}
 	a.seed()
 	a.bootstrapAdmin()
+	if env("KOLLEKT_DEMO_DATA", "") == "1" {
+		a.seedDemo()
+	}
 	a.routes()
 	go a.gcSessions()
 	log.Printf("Kollekt läuft auf %s (Daten: %s)", cfg.Addr, cfg.DataDir)
@@ -85,6 +91,10 @@ func (a *App) gcSessions() {
 
 func (a *App) bootstrapAdmin() {
 	if a.userCount() > 0 || a.cfg.AdminUser == "" || a.cfg.AdminPass == "" {
+		return
+	}
+	if msg := checkPassword(a.cfg.AdminPass); msg != "" {
+		log.Printf("KOLLEKT_ADMIN_PASSWORD abgelehnt: %s", msg)
 		return
 	}
 	if _, err := a.createUser(a.cfg.AdminUser, a.cfg.AdminUser, a.cfg.AdminPass, true, true, true); err != nil {
@@ -183,11 +193,10 @@ func (a *App) funcs(self *template.Template) template.FuncMap {
 			}
 			return 0
 		},
-		"sub":        func(a, b int) int { return a - b },
-		"sub64":      func(a, b float64) float64 { return a - b },
-		"int64":      func(s string) int64 { return int64(parseNum(s)) },
-		"unitCostOf": unitCost,
-		"urlq":       url.QueryEscape,
+		"sub":   func(a, b int) int { return a - b },
+		"sub64": func(a, b float64) float64 { return a - b },
+		"int64": func(s string) int64 { return int64(parseNum(s)) },
+		"urlq":  url.QueryEscape,
 		"safeURL": func(s string) template.URL {
 			if strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://") || strings.HasPrefix(s, "mailto:") {
 				return template.URL(s)
@@ -466,8 +475,22 @@ func sameOrigin(r *http.Request) bool {
 	return u.Host == host
 }
 
+const maxBody = 1 << 20
+
+func limitBody(w http.ResponseWriter, r *http.Request) {
+	if r.Body == nil {
+		return
+	}
+	max := int64(maxBody)
+	if strings.HasSuffix(r.URL.Path, "/files") {
+		max = maxUpload + 1<<20
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, max)
+}
+
 func (a *App) public(h handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		limitBody(w, r)
 		c := a.newC(w, r)
 		if r.Method == http.MethodPost && !sameOrigin(r) {
 			c.Error(403, "Ungültige Herkunft der Anfrage.")
@@ -479,6 +502,7 @@ func (a *App) public(h handler) http.HandlerFunc {
 
 func (a *App) auth(h handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		limitBody(w, r)
 		c := a.newC(w, r)
 		if c.User == nil {
 			if a.userCount() == 0 {
@@ -493,6 +517,10 @@ func (a *App) auth(h handler) http.HandlerFunc {
 			return
 		}
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			if r.ContentLength > maxUpload+(1<<20) {
+				c.Error(413, "Die Datei ist zu groß (maximal 25 MB pro Datei).")
+				return
+			}
 			if !sameOrigin(r) || r.FormValue("_csrf") != c.Sess.CSRF {
 				c.Error(403, "Die Sitzung ist abgelaufen oder die Anfrage ungültig. Bitte Seite neu laden.")
 				return
@@ -551,6 +579,9 @@ func secureHeaders(next http.Handler) http.Handler {
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Referrer-Policy", "same-origin")
+		if isHTTPS(r) {
+			h.Set("Strict-Transport-Security", "max-age=31536000")
+		}
 		h.Set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'")
 		next.ServeHTTP(w, r)
 	})

@@ -46,6 +46,7 @@ type Field struct {
 	Datalist   []string // static suggestions for TText
 	DatalistFn string   // dynamic suggestions: "field values of this module key"
 	Sum        bool
+	BlankLabel string
 }
 
 func F(key, label string, t FieldType) Field { return Field{Key: key, Label: label, Type: t} }
@@ -56,6 +57,7 @@ func (f Field) Wide_() Field           { f.Wide = true; return f }
 func (f Field) Fin_() Field            { f.Fin = true; return f }
 func (f Field) Sum_() Field            { f.Sum = true; return f }
 func (f Field) Quick_() Field          { f.Quick = true; f.InList = true; return f }
+func (f Field) Blank(s string) Field   { f.BlankLabel = s; return f }
 func (f Field) Hint(s string) Field    { f.Help = s; return f }
 func (f Field) Unit(s string) Field    { f.Suffix = s; return f }
 func (f Field) Def(s string) Field     { f.Default = s; return f }
@@ -103,6 +105,7 @@ type Module struct {
 	ExtraTpl                        string
 	ExtraPos                        string // "top" (default) or "bottom"
 	NoList                          bool   // list shows only Extra
+	NoAttach                        bool   // no file attachments
 	Empty                           string
 	Order                           int
 }

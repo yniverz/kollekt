@@ -28,7 +28,7 @@ func near(a, b float64) bool { return math.Abs(a-b) < 0.005 }
 
 func TestUnitCostIncludesWaste(t *testing.T) {
 	r := &Rec{D: map[string]string{"content": "50", "price": "140", "waste": "10"}}
-	if got := unitCost(r); !near(got, 140.0/45.0) {
+	if got := unitCostOf(r.N("price"), r); !near(got, 140.0/45.0) {
 		t.Fatalf("unitCost = %v", got)
 	}
 }
@@ -44,7 +44,7 @@ func TestBarShoppingListRoundsUpAndBuffers(t *testing.T) {
 	if b.Items[0].Buy != 5 {
 		t.Fatalf("buy = %d, want 5", b.Items[0].Buy)
 	}
-	if !near(b.Purchase, 80) || !near(b.Revenue, 300) {
+	if !near(b.Purchase, 80) || !near(b.Revenue, 300/1.19) { // Verkaufspreis brutto, Auswertung netto
 		t.Fatalf("purchase %v revenue %v", b.Purchase, b.Revenue)
 	}
 	e.setting("bar", BarSettings{Buffer: 10}) // 4.58 -> 5 still
@@ -145,6 +145,76 @@ func TestScopedRoleOnlySeesOwnAreas(t *testing.T) {
 	}
 	if c.finVisible(&Rec{D: map[string]string{"area": itoa(tech.ID)}}, "equipment") {
 		t.Fatal("costs of foreign areas must be hidden")
+	}
+}
+
+func TestNetGrossHandling(t *testing.T) {
+	a, e, c := testApp(t)
+	e.Modules = []string{"budget"}
+	// Standard: Auswertung netto, Eingabe netto, 19 %
+	mk := func(d map[string]string) {
+		d["title"], d["kind"], d["qty"], d["scale"] = "x", "exp", "1", "fix"
+		_ = a.saveRec(&Rec{EventID: e.ID, Module: "budget", D: d})
+	}
+	mk(map[string]string{"unit_price": "100"})                               // netto -> 100
+	mk(map[string]string{"unit_price": "119", "entry": "gross"})             // brutto 19 % -> 100
+	mk(map[string]string{"unit_price": "50", "entry": "gross", "vat": "0"})  // Kleinlieferant -> 50
+	mk(map[string]string{"unit_price": "107", "entry": "gross", "vat": "7"}) // 7 % -> 100
+	if f := c.finance(0); !near(f.Expense, 350) {
+		t.Fatalf("net expense = %v, want 350", f.Expense)
+	}
+	e.setting("tax", TaxSettings{Basis: "gross", Entry: "net", VAT: 19})
+	c.invalidate()
+	// brutto: 119 + 119 + 50 + 107
+	if f := c.finance(0); !near(f.Expense, 395) {
+		t.Fatalf("gross expense = %v, want 395", f.Expense)
+	}
+}
+
+func TestSalePricesAreGrossByDefault(t *testing.T) {
+	_, e, c := testApp(t)
+	r := &Rec{D: map[string]string{"price": "4.76"}}
+	if got := c.saleAmt(4.76, r); !near(got, 4) {
+		t.Fatalf("net sale = %v", got)
+	}
+	r.D["vat"] = "7"
+	if got := c.saleAmt(5.35, r); !near(got, 5) {
+		t.Fatalf("7%% sale = %v", got)
+	}
+	e.setting("tax", TaxSettings{Basis: "gross", Entry: "net", VAT: 19})
+	if got := c.saleAmt(5.35, r); !near(got, 5.35) {
+		t.Fatalf("gross basis keeps gross, got %v", got)
+	}
+}
+
+func TestCleanFilename(t *testing.T) {
+	cases := map[string]string{
+		"../../etc/passwd": "passwd",
+		`C:\x\Vertrag.pdf`: "Vertrag.pdf",
+		"a\"b.txt":         "ab.txt",
+		"":                 "datei",
+		"..":               "datei",
+	}
+	for in, want := range cases {
+		if got := cleanFilename(in); got != want {
+			t.Errorf("cleanFilename(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestSessionTokensAreStoredHashed(t *testing.T) {
+	a, _, c := testApp(t)
+	tok, err := a.newSession(c.User.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	_ = a.db.QueryRow("SELECT COUNT(*) FROM sessions WHERE token=?", tok).Scan(&n)
+	if n != 0 {
+		t.Fatal("raw token must not be stored")
+	}
+	if a.session(tok) == nil {
+		t.Fatal("session lookup by raw token failed")
 	}
 }
 

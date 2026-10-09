@@ -47,7 +47,7 @@ func init() {
 	reg(&Module{
 		Key: "areas", Name: "Bereiche", Singular: "Bereich", Icon: "layers", Core: true, Default: true, Order: 1,
 		Desc:  "Zuständigkeiten wie Bar, Technik oder Einlass. Jeder Bereich hat eine Leitung; Aufgaben, Kosten und Personal lassen sich Bereichen zuordnen.",
-		Title: "name", NoList: true, ExtraTpl: "x_areas", Extra: areasExtra,
+		Title: "name", NoList: true, NoAttach: true, ExtraTpl: "x_areas", Extra: areasExtra,
 		Empty: "Noch keine Bereiche. Lege z. B. Bar, Technik und Einlass an.",
 		Fields: []Field{
 			F("name", "Name", TText).Req().List(),
@@ -170,7 +170,7 @@ func init() {
 			F("notes", "Notizen", TTextarea).Wide_(),
 		},
 		Virt: []VField{{Key: "unit_cost", Label: "Kosten pro Einheit", Type: TMoney, Fn: func(c *C, r *Rec) string {
-			return numStr(unitCost(r))
+			return numStr(c.unitCost(r))
 		}}},
 	})
 	reg(&Module{
@@ -336,7 +336,33 @@ func init() {
 		},
 	})
 
+	// net/gross handling: amounts can be entered net or gross with their own VAT rate.
+	for _, k := range []string{"budget", "lineup", "equipment", "loc_candidates", "bar_items"} {
+		insertBeforeNotes(modByKey[k], vatFields())
+	}
+	insertBeforeNotes(modByKey["bar_products"], []Field{
+		F("vat", "USt-Satz", TSelect).Options(O("0", "0 %", "gray"), O("7", "7 %", "gray"), O("19", "19 %", "gray")).Blank("Standard des Events").Hint("Verkaufspreise gelten als Brutto-Preise (so steht es auf der Karte). 7 % z. B. für Speisen zum Mitnehmen."),
+	})
 	sort.SliceStable(modules, func(i, j int) bool { return modules[i].Order < modules[j].Order })
+}
+
+func vatFields() []Field {
+	return []Field{
+		F("entry", "Betrag ist", TSelect).Options(O("net", "Netto", "blue"), O("gross", "Brutto", "gray")).Blank("Standard des Events").Hint("Kleine Lieferanten ohne USt: „Brutto“ und 0 %."),
+		F("vat", "USt-Satz", TSelect).Options(O("0", "0 % (steuerfrei / Kleinunternehmer)", "gray"), O("7", "7 %", "gray"), O("19", "19 %", "gray")).Blank("Standard des Events"),
+	}
+}
+
+func insertBeforeNotes(m *Module, add []Field) {
+	for i := range m.Fields {
+		if m.Fields[i].Key == "notes" {
+			out := append([]Field{}, m.Fields[:i]...)
+			out = append(out, add...)
+			m.Fields = append(out, m.Fields[i:]...)
+			return
+		}
+	}
+	m.Fields = append(m.Fields, add...)
 }
 
 // eventModules returns modules usable inside events, in nav order.

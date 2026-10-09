@@ -112,6 +112,7 @@ type Cell struct {
 	Opts  []Opt
 	URL   string
 	Num   bool
+	N     int
 }
 
 type Row struct {
@@ -277,6 +278,14 @@ func (c *C) sortRecs(m *Module, recs []*Rec) {
 
 func (c *C) buildRows(m *Module, recs []*Rec) []*Row {
 	editable := c.canEditModule(m)
+	var counts map[int64]int
+	if c.attachable(m) {
+		var evID int64
+		if !m.Global {
+			evID = c.Event.ID
+		}
+		counts = c.A.fileCounts(evID, m.Key)
+	}
 	var rows []*Row
 	for _, r := range recs {
 		row := &Row{R: r, Title: c.A.recTitle(c, m, r), Edit: editable}
@@ -287,7 +296,7 @@ func (c *C) buildRows(m *Module, recs []*Rec) []*Row {
 			}
 			cell := c.cellFor(m, f, r)
 			if f.Key == m.Title {
-				cell = Cell{Kind: "title", Text: row.Title}
+				cell = Cell{Kind: "title", Text: row.Title, N: counts[r.ID]}
 			}
 			row.Cells = append(row.Cells, cell)
 		}
@@ -695,6 +704,11 @@ func (c *C) renderForm(m *Module, rec *Rec, vals map[string]string, errs map[str
 		"M": m, "Rec": rec, "Fields": c.fieldViews(m, rec, errs, vals), "Action": action, "Next": next,
 		"Title": title, "IsNew": rec == nil, "MultiCreate": m.MultiCreate && rec == nil,
 		"DeleteURL": action + "/delete", "CanDelete": rec != nil,
+		"CanAttach": rec != nil && c.attachable(m),
+	}
+	if rec != nil && c.attachable(m) {
+		data["Files"] = c.fileViews(m, rec)
+		data["UploadURL"] = action + "/files"
 	}
 	if c.Event != nil {
 		data["Nav"] = c.eventNav(m.PermKey())

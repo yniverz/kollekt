@@ -20,6 +20,7 @@
 {{end}}
 
 {{define "x_budget"}}{{$b := .Extra}}{{$f := $b.Fin}}
+<p class="muted small" style="margin:-6px 0 12px"><span class="badge b-gray">{{$b.Basis}}</span> Einzelne Posten dürfen abweichend netto oder brutto erfasst sein, sie werden umgerechnet.</p>
 {{if not $b.Scoped}}
 <div class="kpis">
   <div class="kpi"><div class="l">Einnahmen (Plan)</div><div class="v">{{eur $f.Income}}</div><div class="s">bei {{num (float $b.Guests)}} Gästen</div></div>

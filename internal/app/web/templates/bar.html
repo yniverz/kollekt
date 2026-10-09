@@ -1,6 +1,6 @@
 {{define "content"}}
 <div class="page-head">
-  <div><h1>Bar &amp; Verkauf</h1><p class="sub">Geplant für {{num (float .G)}} Gäste ({{.Scenario}}){{if .HasCalc}}. Die Gästezahl änderst du in der Kalkulation.{{end}}</p></div>
+  <div><h1>Bar &amp; Verkauf</h1><p class="sub">Geplant für {{num (float .G)}} Gäste ({{.Scenario}}){{if .HasCalc}}. Die Gästezahl änderst du in der Kalkulation.{{end}} <span class="badge b-gray">{{.Basis}}</span></p></div>
 </div>
 <div class="tabs" role="tablist">
   <a href="{{.Base}}?tab=sell" class="{{if eq .Tab "sell"}}on{{end}}">Verkauf</a>
@@ -54,7 +54,7 @@
         <td class="title"><a {{if $.CanEdit}}data-modal href="/e/{{$.Event.ID}}/m/bar_items/{{.R.ID}}?next={{$next}}"{{else}}href="#"{{end}}>{{.R.S "name"}}</a></td>
         <td>{{.R.S "category"}}</td><td>{{.R.S "pack"}}</td>
         <td class="num">{{eur (.R.N "price")}}</td>
-        <td class="num">{{eur (unitCostOf .R)}} / {{.R.S "unit"}}</td>
+        <td class="num">{{eur .UnitCost}} / {{.R.S "unit"}}</td>
         <td class="num">{{if .R.S "deposit"}}{{eur (.R.N "deposit")}}{{else}}–{{end}}</td>
         <td class="num">{{if .R.S "have"}}{{num (.R.N "have")}}{{else}}–{{end}}</td>
         <td>{{if gt .Need 0.0}}{{num .Need}} {{.R.S "unit"}}{{else}}<span class="muted">nicht verwendet</span>{{end}}</td>

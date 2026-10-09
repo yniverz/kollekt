@@ -1,6 +1,6 @@
 {{define "content"}}
 <div class="page-head">
-  <div><h1>Kalkulation</h1><p class="sub">Was kommt bei welcher Gästezahl heraus? Ausgaben stammen aus Budget, Line-up, Personal, Material, Genehmigungen und Bar.</p></div>
+  <div><h1>Kalkulation</h1><p class="sub">Was kommt bei welcher Gästezahl heraus? Ausgaben stammen aus Budget, Line-up, Personal, Material, Genehmigungen und Bar. <span class="badge b-gray">{{.Basis}}</span></p></div>
 </div>
 
 <div class="scenarios">
@@ -77,7 +77,7 @@
       <button type="button" class="btn sm" data-add-row="tpl-tr" data-into="trs">{{icon "plus"}} Preisstufe</button>
       <p class="help muted small" style="margin-top:6px">Anteil = Prozent aller Gäste. Der Rest (falls unter 100 %) zahlt nichts, z. B. Gästeliste.{{if gt .ShareSum 100.01}} <b class="bad">Aktuell {{num .ShareSum}} %!</b>{{else}} Aktuell {{num .ShareSum}} %, Ø {{eur .AvgPrice}} pro Gast.{{end}}</p>
       <div class="form-grid" style="margin-top:14px">
-        <div class="field"><label class="lbl" for="vat">Umsatzsteuer auf Einnahmen</label><div class="inp-suffix"><input id="vat" type="number" step="any" min="0" name="vat" value="{{.S.VAT}}"><span>%</span></div><div class="help">0 = Brutto rechnen. Mit 19 werden Eintritt und Verkauf netto gerechnet.</div></div>
+        <div class="field"><label class="lbl" for="vat">Umsatzsteuer auf Eintritt</label><div class="inp-suffix"><input id="vat" type="number" step="any" min="0" name="vat" value="{{.S.VAT}}"><span>%</span></div><div class="help">Eintrittspreise sind Brutto-Preise. Bei Netto-Auswertung wird dieser Satz herausgerechnet (0 = steuerfrei).</div></div>
         {{if not .HasBar}}<div class="field"><label class="lbl" for="bs">Verzehr pro Gast</label><div class="inp-suffix"><input id="bs" type="number" step="any" min="0" name="bar_spend" value="{{.S.BarSpend}}"><span>€</span></div><div class="help">Pauschale, solange das Bar-Modul nicht aktiv ist.</div></div>{{else}}<input type="hidden" name="bar_spend" value="{{.S.BarSpend}}">{{end}}
       </div>
     </div>

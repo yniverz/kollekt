@@ -28,11 +28,88 @@ type CalcSettings struct {
 	ActualTickets string     `json:"actual_tickets"`
 }
 
+type TaxSettings struct {
+	Basis string  `json:"basis"` // net | gross: what all results are shown in
+	Entry string  `json:"entry"` // net | gross: how costs are entered by default
+	VAT   float64 `json:"vat"`   // default VAT rate in percent
+}
+
+func (c *C) tax() TaxSettings {
+	t := TaxSettings{Basis: "net", Entry: "net", VAT: 19}
+	var s TaxSettings
+	if c.Event.getSetting("tax", &s) {
+		if s.Basis == "net" || s.Basis == "gross" {
+			t.Basis = s.Basis
+		}
+		if s.Entry == "net" || s.Entry == "gross" {
+			t.Entry = s.Entry
+		}
+		if s.VAT >= 0 && s.VAT <= 100 {
+			t.VAT = s.VAT
+		}
+	}
+	return t
+}
+
+func (c *C) basisLabel() string {
+	if c.tax().Basis == "gross" {
+		return "Alle Beträge brutto"
+	}
+	return "Alle Beträge netto"
+}
+
+func convertAmt(v float64, gross bool, rate float64, toGross bool) float64 {
+	net := v
+	if gross {
+		net = v / (1 + rate/100)
+	}
+	if toGross {
+		return net * (1 + rate/100)
+	}
+	return net
+}
+
+// amt converts a cost-style amount of record r into the event's calculation basis.
+func (c *C) amt(v float64, r *Rec, sale bool) float64 {
+	t := c.tax()
+	entry := r.S("entry")
+	if entry == "" {
+		entry = t.Entry
+		if sale {
+			entry = "gross"
+		}
+	}
+	rate := t.VAT
+	if r.S("vat") != "" {
+		rate = r.N("vat")
+	}
+	return convertAmt(v, entry == "gross", rate, t.Basis == "gross")
+}
+
+// saleAmt converts a price printed on the menu (always gross).
+func (c *C) saleAmt(v float64, r *Rec) float64 {
+	t := c.tax()
+	rate := t.VAT
+	if r.S("vat") != "" {
+		rate = r.N("vat")
+	}
+	return convertAmt(v, true, rate, t.Basis == "gross")
+}
+
+// ticketFactor turns gross ticket/consumption revenue into the calculation basis.
+func (c *C) ticketFactor(s CalcSettings) float64 {
+	if c.tax().Basis == "net" && s.VAT > 0 {
+		return 1 / (1 + s.VAT/100)
+	}
+	return 1
+}
+
 func (c *C) calcSettings() CalcSettings {
 	var s CalcSettings
 	if !c.Event.getSetting("calc", &s) || len(s.Scenarios) == 0 {
 		s.Scenarios = []Scenario{{"Vorsichtig", 150}, {"Realistisch", 250}, {"Optimistisch", 350}}
 		s.Baseline = 1
+		s.VAT = 19
 	}
 	if len(s.Tiers) == 0 {
 		s.Tiers = []Tier{{"Eintritt", 10, 100}}
@@ -96,7 +173,7 @@ func (c *C) budgetPlan(r *Rec) float64 {
 	if r.S("scale") == "guest" {
 		amt *= float64(c.Baseline())
 	}
-	return amt
+	return c.amt(amt, r, false)
 }
 
 func (c *C) chosenCandidate() int64 {
@@ -112,10 +189,7 @@ func staffCost(r *Rec) float64 {
 func (c *C) finance(G int) *Finance {
 	f := &Finance{G: G}
 	s := c.calcSettings()
-	vatF := 1.0
-	if s.VAT > 0 {
-		vatF = 1 / (1 + s.VAT/100)
-	}
+	vatF := c.ticketFactor(s)
 	e := c.Event
 	// tickets
 	ticket := FinLine{Source: "tickets", Kind: "in", Title: "Eintritt", Category: "Eintritt", Auto: true}
@@ -153,12 +227,12 @@ func (c *C) finance(G int) *Finance {
 				kind = "in"
 			}
 			l := FinLine{Source: "budget", Kind: kind, Title: r.S("title"), Category: r.S("category"), AreaID: r.I("area"),
-				Plan: c.budgetPlanG(r, G), Status: r.S("status"), Due: r.S("due"), RecID: r.ID}
+				Plan: c.amt(c.budgetPlanG(r, G), r, false), Status: r.S("status"), Due: r.S("due"), RecID: r.ID}
 			if l.Category == "" {
 				l.Category = "Ohne Kategorie"
 			}
 			if r.S("actual") != "" {
-				l.Actual, l.HasActual = r.N("actual"), true
+				l.Actual, l.HasActual = c.amt(r.N("actual"), r, false), true
 			}
 			l.Paid = r.S("status") == "paid"
 			f.Lines = append(f.Lines, l)
@@ -179,7 +253,7 @@ func (c *C) finance(G int) *Finance {
 			if r.S("status") == "no" {
 				continue
 			}
-			add("lineup", r.S("artist"), "Line-up", 0, r.N("fee")+r.N("extra"), r.B("paid"), r.ID)
+			add("lineup", r.S("artist"), "Line-up", 0, c.amt(r.N("fee")+r.N("extra"), r, false), r.B("paid"), r.ID)
 		}
 	}
 	if e.Has("staff") {
@@ -196,7 +270,7 @@ func (c *C) finance(G int) *Finance {
 	}
 	if e.Has("equipment") {
 		for _, r := range c.Recs("equipment") {
-			add("equipment", r.S("item"), "Material", r.I("area"), r.N("cost"), r.B("paid"), r.ID)
+			add("equipment", r.S("item"), "Material", r.I("area"), c.amt(r.N("cost"), r, false), r.B("paid"), r.ID)
 		}
 	}
 	if e.Has("permits") {
@@ -211,7 +285,7 @@ func (c *C) finance(G int) *Finance {
 		if id := c.chosenCandidate(); id != 0 {
 			for _, r := range c.Recs("loc_candidates") {
 				if r.ID == id {
-					add("location", "Location: "+c.RefTitle("locations", r.I("location")), "Location", 0, r.N("cost"), false, r.ID)
+					add("location", "Location: "+c.RefTitle("locations", r.I("location")), "Location", 0, c.amt(r.N("cost"), r, false), false, r.ID)
 				}
 			}
 		}
@@ -337,10 +411,7 @@ func (c *C) handleCalc(w http.ResponseWriter, r *http.Request) {
 		prices = append(prices, cur)
 		sort.Float64s(prices)
 	}
-	vatF := 1.0
-	if s.VAT > 0 {
-		vatF = 1 / (1 + s.VAT/100)
-	}
+	vatF := c.ticketFactor(s)
 	var grid []GridRow
 	finCache := map[int]*Finance{}
 	for _, p := range prices {
@@ -366,7 +437,7 @@ func (c *C) handleCalc(w http.ResponseWriter, r *http.Request) {
 	data := map[string]any{
 		"Title": "Kalkulation", "Nav": c.eventNav("calc"), "S": s, "Rows": rows, "BE": be, "Grid": grid,
 		"ShareSum": shareSum, "Capacity": capacity, "CanEdit": c.CanEdit("calc"), "Base": base, "Contrib": contrib,
-		"AvgPrice": s.avgPrice(), "HasBar": c.Event.Has("bar"), "HasBudget": c.Event.Has("budget"),
+		"AvgPrice": s.avgPrice(), "Basis": c.basisLabel(), "NetBasis": c.tax().Basis == "net", "HasBar": c.Event.Has("bar"), "HasBudget": c.Event.Has("budget"),
 		"Actual": strings.TrimSpace(s.ActualTickets) != "" || s.ActualGuests > 0,
 	}
 	c.Page("calc.html", data)
@@ -467,12 +538,13 @@ type BudgetView struct {
 	AutoRows []FinLine
 	Scoped   bool
 	Warn     []string
+	Basis    string
 }
 
 func budgetExtra(c *C) any {
 	g := c.Baseline()
 	f := c.finance(g)
-	bv := &BudgetView{Fin: f, Guests: g, Scoped: c.scoped()}
+	bv := &BudgetView{Fin: f, Guests: g, Scoped: c.scoped(), Basis: c.basisLabel()}
 	cats := map[string]*CatRow{}
 	incs := map[string]*CatRow{}
 	areaPlan := map[int64]float64{}

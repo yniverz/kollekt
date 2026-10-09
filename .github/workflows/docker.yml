@@ -18,6 +18,7 @@ jobs:
         with:
           go-version-file: go.mod
       - run: go vet ./... && go test ./...
+      - run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
   image:
     needs: test

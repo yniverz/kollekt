@@ -105,19 +105,24 @@ func builtinTemplates() []*Template {
 		b.area(a[0], a[1])
 	}
 	for _, p := range []string{
-		"title=Veranstaltungsanzeige beim Ordnungsamt|authority=Ordnungsamt|notes=Frist beim Amt erfragen, oft 4 bis 8 Wochen vorher.",
-		"title=Gestattung für vorübergehenden Gaststättenbetrieb|authority=Ordnungsamt|notes=Für den Ausschank. Je nach Bundesland und Kommune unterschiedlich.",
-		"title=Zustimmung des Grundstückseigentümers|authority=Eigentümer|notes=Schriftlich, mit Nutzungszeitraum und Auflagen.",
-		"title=Lärmschutz / Ausnahme Immissionsschutz|authority=Ordnungsamt / Umweltamt|notes=Zeiten, Pegel und Ausrichtung der Boxen abstimmen.",
-		"title=Sicherheitskonzept|authority=Ordnungsamt / Polizei / Feuerwehr|notes=Fluchtwege, Besucherobergrenze, Sicherheitspersonal, Ansprechpersonen.",
-		"title=Sanitätsdienst|authority=Hilfsorganisation|notes=Sanitätsdienst rechtzeitig buchen, Kosten einplanen.",
-		"title=Brandschutz / Feuerwehr|authority=Feuerwehr|notes=Löschmittel, Zufahrten, Pyrotechnik klären.",
-		"title=Naturschutz / Untere Naturschutzbehörde|authority=Untere Naturschutzbehörde|notes=Nur bei Flächen in oder nahe Schutzgebieten.",
-		"title=Verkehrsrechtliche Anordnung / Parken|authority=Straßenverkehrsamt|notes=Falls Straßen gesperrt oder Parkflächen genutzt werden.",
-		"title=GEMA-Anmeldung|authority=GEMA|notes=Vor dem Event anmelden, Fläche und Eintritt angeben.",
-		"title=Künstlersozialabgabe (KSK) prüfen|authority=KSK|notes=Bei Honoraren an Künstler/DJs relevant, Pflicht klären.",
-		"title=Veranstalterhaftpflicht|authority=Versicherung|notes=Deckungssumme und Bedingungen prüfen.",
-		"title=Müll- und Reinigungskonzept|authority=Ordnungsamt / Entsorger|notes=Container, Endreinigung, Pfandsystem.",
+		"title=Veranstaltung anmelden (Veranstaltungsleitfaden)|authority=Ordnungs- und Bürgeramt Karlsruhe|notes=Erste Anlaufstelle. Das Amt zieht bei Bedarf die Fachämter hinzu und legt Auflagen fest. Frühzeitig melden. Leitfaden: https://web1.karlsruhe.de/service/Formulare/ordnungsamt/OA3_Veranstaltungsleitfaden_Karlsruhe.pdf",
+		"title=Vorübergehender Gaststättenbetrieb (Alkoholausschank)|authority=Ordnungs- und Bürgeramt Karlsruhe – Gaststätten- und Gewerberecht|notes=In Baden-Württemberg Anzeige bzw. Gestattung nach dem Landesgaststättengesetz. Kommunale Formulare nennen meist mindestens zwei Wochen Vorlauf. Aktuelles Karlsruher Formular und Frist beim Amt bestätigen. Nur alkoholfreie Getränke oder Speisen laufen über ein anderes Verfahren.",
+		"title=Sperrzeit und Lärmschutz klären|authority=Ordnungs- und Bürgeramt Karlsruhe|notes=Sperrzeit nach Landesgaststättengesetz (laut kommunalen Hinweisen regelmäßig ab 3 Uhr, Verkürzung beantragbar) und Immissionswerte für die Nachtruhe. Open-End-Zeiten und Boxenausrichtung vorab abstimmen. Ohne Gewähr, mit dem Amt klären.",
+		"title=Fläche: Zustimmung Eigentümer oder Sondernutzung öffentlicher Grund|authority=Eigentümer / Stadt Karlsruhe|notes=Privatfläche: schriftliche Zustimmung mit Nutzungszeitraum, Haftung und Rückbau. Öffentlicher Grund: Antrag über die Stadt (im Veranstaltungsleitfaden beschrieben).",
+		"title=Verkehrsrechtliche Anordnung (Sperrung, Parken, Zufahrt)|authority=Straßenverkehrsstelle Karlsruhe|notes=Nur nötig bei Straßensperrung, Halteverboten oder Nutzung von Verkehrsflächen.",
+		"title=Sicherheitskonzept (Besucherzahl, Fluchtwege, Ordnungsdienst)|authority=Ordnungs- und Bürgeramt / Polizei / Feuerwehr|notes=Umfang legt die Stadt im Einzelfall fest. Bei großen Veranstaltungen (Leitfaden: ab etwa 5.000 gleichzeitig Anwesenden) frühzeitig die Straßenverkehrsstelle kontaktieren.",
+		"title=Bühne und Zelte: Fliegende Bauten anzeigen / abnehmen|authority=Bauordnungsbehörde der Stadt|notes=Zelte und Bühnen sind in der Regel Fliegende Bauten. Kommunale Formulare nennen mindestens eine Woche Vorlauf vor dem Aufbau. Ausführungsgenehmigung und Prüfbuch vom Verleiher geben lassen.",
+		"title=Versammlungsstättenrecht prüfen (VStättVO Baden-Württemberg)|authority=Bauordnungsbehörde der Stadt|notes=Gilt je nach Größe auch für Freigelände mit Szenenflächen. Mit der Bauordnungsbehörde klären, ob und was gilt.",
+		"title=Brandschutz, Zufahrten, Rettungswege|authority=Feuerwehr Karlsruhe|notes=Zufahrt für Rettungsfahrzeuge, Löschmittel, Pyrotechnik, Heizgeräte, Aggregate.",
+		"title=Sanitätsdienst buchen|authority=Hilfsorganisation|notes=Umfang richtet sich nach Besucherzahl und Sicherheitskonzept.",
+		"title=Naturschutz / Landschaftsschutz prüfen|authority=Untere Naturschutzbehörde|notes=Nur bei Flächen in oder nahe Schutzgebieten (Wald, Auen, Gewässer).",
+		"title=Jugendschutz: Aushang und Alterskontrolle|authority=Ordnungs- und Bürgeramt Karlsruhe|notes=Jugendschutzgesetz: Aushang, Alterskontrolle beim Einlass und Ausschank.",
+		"title=Lebensmittelrecht bei Speisen anmelden|authority=Lebensmittelüberwachung Karlsruhe|notes=Wenn Speisen angeboten werden: Anmeldung, Hygienebelehrung der Helfer (Infektionsschutzgesetz).",
+		"title=GEMA-Anmeldung|authority=GEMA|notes=Vor dem Event anmelden (Fläche, Eintritt, Veranstaltungsart). Tarif hängt von Größe und Eintritt ab.",
+		"title=Künstlersozialabgabe prüfen|authority=Künstlersozialkasse|notes=Bei Honoraren an Künstler und DJs kann Abgabepflicht bestehen. Prüfen und ggf. melden.",
+		"title=Vergnügungssteuer: Pflicht bei der Stadt erfragen|authority=Stadt Karlsruhe|notes=Klären, ob für die Veranstaltungsart eine kommunale Steuer anfällt.",
+		"title=Veranstalterhaftpflicht abschließen|authority=Versicherung|notes=Deckungssumme, Bedingungen, Außenbereich, Aufbauzeit und Helfer prüfen.",
+		"title=Müll- und Reinigungskonzept|authority=Amt für Abfallwirtschaft Karlsruhe|notes=Container, Endreinigung, Mehrweg und Pfand.",
 	} {
 		b.add("permits", p+"|status=todo")
 	}
@@ -180,7 +185,7 @@ func builtinTemplates() []*Template {
 	b.prod("name=Vodka-Mate|stand=Bar|category=Longdrinks|price=6.5|pp=0.5", vodka, 4.0, mate, 1.0, becher, 1.0, eis, 0.1)
 	b.prod("name=Gin Tonic|stand=Bar|category=Longdrinks|price=7|pp=0.4", gin, 4.0, tonic, 1.0, becher, 1.0, eis, 0.1)
 	out = append(out, &Template{
-		Name: "Techno Open Air", Description: "Outdoor-Rave mit Genehmigungsliste, Bereichen, Bar-Beispielsortiment und typischen Aufgaben.",
+		Name: "Techno Open Air", Description: "Outdoor-Rave mit Genehmigungsliste für Karlsruhe / Baden-Württemberg (Hinweise ohne Gewähr), Bereichen, Bar-Beispielsortiment und Aufgaben.",
 		Payload: TplPayload{Modules: mods, Records: b.recs, Settings: calcSeed(300)},
 	})
 
@@ -190,10 +195,14 @@ func builtinTemplates() []*Template {
 		b.area(a[0], a[1])
 	}
 	for _, p := range []string{
-		"title=Vertrag mit der Location|authority=Betreiber|notes=Miete, Kaution, Bar-Regelung, Sperrzeit.",
-		"title=Veranstaltungsanzeige / Sonderöffnungszeit|authority=Ordnungsamt|notes=Nur nötig, wenn die Location keine eigene Konzession deckt.",
-		"title=GEMA-Anmeldung|authority=GEMA",
-		"title=Jugendschutz / Altersnachweis klären|authority=Ordnungsamt",
+		"title=Mietvertrag mit der Location|authority=Betreiber|notes=Miete, Kaution, Technik, Bar-Regelung, Sperrzeit, Haftung, Endreinigung.",
+		"title=Deckt die Konzession der Location die Veranstaltung?|authority=Betreiber / Ordnungs- und Bürgeramt Karlsruhe|notes=Wenn nicht: vorübergehender Gaststättenbetrieb anzeigen bzw. gestatten lassen (Landesgaststättengesetz, Karlsruher Formular und Frist prüfen).",
+		"title=Veranstaltung anmelden bzw. mit dem Amt abstimmen|authority=Ordnungs- und Bürgeramt Karlsruhe|notes=Bei Unsicherheit zuerst beim Amt nachfragen. Leitfaden: https://web1.karlsruhe.de/service/Formulare/ordnungsamt/OA3_Veranstaltungsleitfaden_Karlsruhe.pdf",
+		"title=Sperrzeit und Lärmschutz klären|authority=Ordnungs- und Bürgeramt Karlsruhe|notes=Sperrzeit nach Landesgaststättengesetz, Verkürzung beantragbar. Nachbarschaft und Auflagen der Location beachten. Ohne Gewähr, mit dem Amt klären.",
+		"title=Jugendschutz: Aushang und Alterskontrolle|authority=Ordnungs- und Bürgeramt Karlsruhe",
+		"title=GEMA-Anmeldung|authority=GEMA|notes=Oft über die Location geregelt: klären, wer anmeldet.",
+		"title=Künstlersozialabgabe prüfen|authority=Künstlersozialkasse",
+		"title=Veranstalterhaftpflicht prüfen|authority=Versicherung|notes=Manchmal in der Location-Versicherung enthalten, oft aber nicht.",
 	} {
 		b.add("permits", p+"|status=todo")
 	}
@@ -214,7 +223,7 @@ func builtinTemplates() []*Template {
 		b.add("budget", l+"|qty=1|scale=fix|status=planned")
 	}
 	out = append(out, &Template{
-		Name: "Club Night (Indoor)", Description: "Abend im Club oder einer gemieteten Halle mit kleiner Genehmigungsliste.",
+		Name: "Club Night (Indoor)", Description: "Abend im Club oder einer gemieteten Halle mit kleiner Genehmigungsliste für Karlsruhe / Baden-Württemberg.",
 		Payload: TplPayload{Modules: mods, Records: b.recs, Settings: calcSeed(200)},
 	})
 
@@ -224,16 +233,18 @@ func builtinTemplates() []*Template {
 		b.area(a[0], a[1])
 	}
 	for _, p := range []string{
-		"title=Veranstaltungsanzeige|authority=Ordnungsamt",
-		"title=Gestattung für vorübergehenden Gaststättenbetrieb|authority=Ordnungsamt|notes=Ausschank von Bier und Speisen.",
-		"title=Gebrauchsabnahme Festzelt (Fliegender Bau)|authority=Bauaufsicht|notes=Bei Zelten über der landesrechtlichen Größe.",
-		"title=Brandschutz und Fluchtwege|authority=Feuerwehr",
+		"title=Veranstaltung anmelden (Veranstaltungsleitfaden)|authority=Ordnungs- und Bürgeramt Karlsruhe|notes=Erste Anlaufstelle für Fest, Zelt und Ausschank. Leitfaden: https://web1.karlsruhe.de/service/Formulare/ordnungsamt/OA3_Veranstaltungsleitfaden_Karlsruhe.pdf",
+		"title=Vorübergehender Gaststättenbetrieb (Bier, Speisen)|authority=Ordnungs- und Bürgeramt Karlsruhe – Gaststätten- und Gewerberecht|notes=In Baden-Württemberg Anzeige bzw. Gestattung nach dem Landesgaststättengesetz. Kommunale Formulare nennen meist mindestens zwei Wochen Vorlauf. Aktuelles Karlsruher Formular und Frist beim Amt bestätigen.",
+		"title=Festzelt: Fliegender Bau anzeigen / Gebrauchsabnahme|authority=Bauordnungsbehörde der Stadt|notes=Kommunale Formulare nennen mindestens eine Woche Vorlauf vor dem Aufbau. Ausführungsgenehmigung und Prüfbuch vom Zeltverleiher geben lassen.",
+		"title=Versammlungsstättenrecht prüfen (VStättVO Baden-Württemberg)|authority=Bauordnungsbehörde der Stadt|notes=Für Zelte mit größerer Besucherzahl relevant, mit der Behörde klären.",
+		"title=Brandschutz, Fluchtwege, Zufahrten|authority=Feuerwehr Karlsruhe",
+		"title=Sicherheitskonzept|authority=Ordnungs- und Bürgeramt / Polizei|notes=Umfang legt die Stadt im Einzelfall fest.",
 		"title=Sanitätsdienst|authority=Hilfsorganisation",
-		"title=Sicherheitskonzept|authority=Ordnungsamt / Polizei",
-		"title=Lebensmittelhygiene (Anmeldung Imbiss)|authority=Lebensmittelaufsicht|notes=Belehrung nach Infektionsschutzgesetz für Helfer.",
-		"title=Jugendschutz-Aushänge und Kontrollen|authority=Ordnungsamt",
-		"title=GEMA-Anmeldung|authority=GEMA",
-		"title=Müll- und Spülkonzept (Mehrweg)|authority=Entsorger",
+		"title=Sperrzeit und Lärmschutz klären|authority=Ordnungs- und Bürgeramt Karlsruhe|notes=Sperrzeit nach Landesgaststättengesetz, Musik im Zelt und Nachtruhe. Ohne Gewähr, mit dem Amt klären.",
+		"title=Lebensmittelhygiene und Belehrung der Helfer|authority=Lebensmittelüberwachung Karlsruhe|notes=Belehrung nach Infektionsschutzgesetz für alle, die mit Speisen arbeiten. Küche und Handwaschmöglichkeit planen.",
+		"title=Jugendschutz: Aushang und Kontrollen|authority=Ordnungs- und Bürgeramt Karlsruhe|notes=Besonders bei Bier und Radler wichtig.",
+		"title=GEMA-Anmeldung|authority=GEMA|notes=Für Livemusik und Musik vom Band.",
+		"title=Müll-, Spül- und Mehrwegkonzept|authority=Amt für Abfallwirtschaft Karlsruhe",
 		"title=Veranstalterhaftpflicht|authority=Versicherung",
 	} {
 		b.add("permits", p+"|status=todo")
@@ -277,7 +288,7 @@ func builtinTemplates() []*Template {
 	b.prod("name=Weißwurst-Paar|stand=Foodstand|category=Essen|price=5|pp=0.3", wurst, 2.0)
 	b.prod("name=Hendl halb|stand=Foodstand|category=Essen|price=11|pp=0.3", hendl, 1.0)
 	out = append(out, &Template{
-		Name: "Kleines Oktoberfest", Description: "Festzelt mit Bierstand, Essen, Pfandsystem, Genehmigungen inkl. Hygiene und Zeltabnahme.",
+		Name: "Kleines Oktoberfest", Description: "Festzelt mit Bierstand, Essen, Pfandsystem und Genehmigungen für Karlsruhe / Baden-Württemberg inkl. Hygiene und Zeltabnahme.",
 		Payload: TplPayload{Modules: mods, Records: b.recs, Settings: calcSeed(250)},
 	})
 
@@ -292,7 +303,7 @@ func builtinTemplates() []*Template {
 func calcSeed(guests int) map[string]json.RawMessage {
 	s := CalcSettings{
 		Scenarios: []Scenario{{"Vorsichtig", guests * 6 / 10}, {"Realistisch", guests}, {"Optimistisch", guests * 14 / 10}},
-		Tiers:     []Tier{{"Eintritt", 10, 100}}, Baseline: 1,
+		Tiers:     []Tier{{"Eintritt", 10, 100}}, Baseline: 1, VAT: 19,
 	}
 	b, _ := json.Marshal(s)
 	return map[string]json.RawMessage{"calc": b}

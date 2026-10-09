@@ -12,6 +12,13 @@
     <div class="field"><label class="lbl" for="end">Ende</label><input id="end" type="datetime-local" name="end" value="{{.Form.end}}"></div>
     <div class="field wide"><label class="lbl" for="desc">Beschreibung</label><textarea id="desc" name="description">{{.Form.description}}</textarea></div>
   </div>
+  <h2 style="margin-top:8px">Netto / Brutto</h2>
+  <p class="muted small">Alle Auswertungen (Budget, Kalkulation, Bar) laufen in einer Basis. Einzelne Posten können abweichend netto oder brutto erfasst werden, etwa bei kleinen Lieferanten ohne Umsatzsteuer: Dann „Brutto“ und 0 % wählen.</p>
+  <div class="form-grid">
+    <div class="field"><label class="lbl" for="tb">Auswertung in</label><select id="tb" name="tax_basis"><option value="net" {{if eq .Tax.Basis "net"}}selected{{end}}>Netto (ohne USt)</option><option value="gross" {{if eq .Tax.Basis "gross"}}selected{{end}}>Brutto (mit USt)</option></select></div>
+    <div class="field"><label class="lbl" for="te">Kosten werden standardmäßig erfasst als</label><select id="te" name="tax_entry"><option value="net" {{if eq .Tax.Entry "net"}}selected{{end}}>Netto</option><option value="gross" {{if eq .Tax.Entry "gross"}}selected{{end}}>Brutto</option></select></div>
+    <div class="field"><label class="lbl" for="tv">Standard-USt-Satz</label><div class="inp-suffix"><input id="tv" type="number" step="any" min="0" max="100" name="tax_vat" value="{{.Tax.VAT}}"><span>%</span></div><div class="help">Gilt für Posten ohne eigenen Satz. Verkaufspreise und Eintritt sind immer Brutto-Preise.</div></div>
+  </div>
   <h2 style="margin-top:8px">Module</h2>
   <p class="muted small">Nur aktive Module erscheinen in der Navigation. Daten deaktivierter Module bleiben erhalten.</p>
   <div style="columns:2 280px;column-gap:24px">
