@@ -2,6 +2,7 @@ package app
 
 import (
 	"math"
+	"strings"
 	"testing"
 )
 
@@ -215,6 +216,76 @@ func TestSessionTokensAreStoredHashed(t *testing.T) {
 	}
 	if a.session(tok) == nil {
 		t.Fatal("session lookup by raw token failed")
+	}
+}
+
+func TestRelativeDeadlines(t *testing.T) {
+	a, e, _ := testApp(t)
+	e.Start = "2026-12-12T20:00"
+	_ = a.saveEvent(e)
+	task := &Rec{EventID: e.ID, Module: "tasks", D: map[string]string{"title": "A", "rel": "42", "due": "2000-01-01"}}
+	nd := &Rec{EventID: e.ID, Module: "tasks", D: map[string]string{"title": "B", "due": "2026-05-05"}}
+	after := &Rec{EventID: e.ID, Module: "tasks", D: map[string]string{"title": "C", "rel": "-2"}}
+	for _, r := range []*Rec{task, nd, after} {
+		_ = a.saveRec(r)
+	}
+	a.applyRelative(e)
+	if got := a.rec(task.ID).S("due"); got != "2026-10-31" {
+		t.Fatalf("42 days before = %s", got)
+	}
+	if got := a.rec(after.ID).S("due"); got != "2026-12-14" {
+		t.Fatalf("2 days after = %s", got)
+	}
+	if got := a.rec(nd.ID).S("due"); got != "2026-05-05" {
+		t.Fatalf("record without rel must keep its date, got %s", got)
+	}
+	e.Start = "2027-01-09T20:00" // event moves by 28 days, deadline follows
+	a.applyRelative(e)
+	if got := a.rec(task.ID).S("due"); got != "2026-11-28" {
+		t.Fatalf("after move: %s", got)
+	}
+}
+
+func TestICSEscapingAndFolding(t *testing.T) {
+	if got := icsEscape("a,b;c\nd\n"); got != "a\\,b\\;c\\nd\\n" {
+		t.Fatalf("escape = %q", got)
+	}
+	long := "SUMMARY:" + strings.Repeat("ä", 80)
+	for _, ln := range strings.Split(icsFold(long), "\r\n") {
+		if len(ln) > 76 { // 75 octets plus the leading space of continuation lines
+			t.Fatalf("line too long (%d)", len(ln))
+		}
+	}
+}
+
+func TestCalendarTokenFeed(t *testing.T) {
+	a, e, c := testApp(t)
+	e.Start = "2026-12-12T20:00"
+	e.Modules = []string{"tasks", "timeplan"}
+	_ = a.saveEvent(e)
+	_ = a.saveRec(&Rec{EventID: e.ID, Module: "tasks", D: map[string]string{"title": "Flyer, drucken", "due": "2026-11-01", "status": "open"}})
+	_ = a.saveRec(&Rec{EventID: e.ID, Module: "tasks", D: map[string]string{"title": "Erledigt", "due": "2026-11-02", "status": "done"}})
+	tok, err := a.newCalToken(e.ID, c.User.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	_ = a.db.QueryRow("SELECT COUNT(*) FROM cal_tokens WHERE token_hash=?", tok).Scan(&n)
+	if n != 0 {
+		t.Fatal("calendar token must be stored hashed")
+	}
+	tok2, _ := a.newCalToken(e.ID, c.User.ID)
+	var cnt int
+	_ = a.db.QueryRow("SELECT COUNT(*) FROM cal_tokens WHERE token_hash=?", hashToken(tok)).Scan(&cnt)
+	if cnt != 0 || tok2 == tok {
+		t.Fatal("regenerating must invalidate the old token")
+	}
+	feed := c.icsFeed()
+	if !strings.Contains(feed, "SUMMARY:Aufgabe: Flyer\\, drucken") || strings.Contains(feed, "Erledigt") {
+		t.Fatalf("feed content wrong:\n%s", feed)
+	}
+	if !strings.Contains(feed, "DTSTART;VALUE=DATE:20261101") || !strings.Contains(feed, "END:VCALENDAR") {
+		t.Fatalf("feed structure wrong:\n%s", feed)
 	}
 }
 

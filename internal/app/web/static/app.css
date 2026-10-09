@@ -292,3 +292,6 @@ details.d > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
   .kv { grid-template-columns: 1fr; }
   .scn { border-right: 0; border-bottom: 1px solid var(--line); }
 }
+
+.filters select, .filters input[type=search] { width: auto; max-width: 100%; }
+.filters { align-items: center; }

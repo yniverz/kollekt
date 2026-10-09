@@ -14,6 +14,15 @@
 {{end}}
 
 
+{{if .Deadlines}}
+<div class="panel">
+  <h2>Fristen in den nächsten 14 Tagen</h2>
+  <ul class="alist">
+    {{range .Deadlines}}<li><span class="when {{if .Late}}late{{end}}">{{if .Late}}überfällig{{else if eq .Days 0}}heute{{else if eq .Days 1}}morgen{{else}}in {{.Days}} T.{{end}}</span><span>{{badge .Label .Color}} <a href="{{.Link}}">{{.Title}}</a> <span class="muted">· {{.Event}}, {{date .Date}}</span></span></li>{{end}}
+  </ul>
+</div>
+{{end}}
+
 <div class="panel flat">
   <h2>Anstehend</h2>
   {{if .Upcoming}}{{template "eventtable" .Upcoming}}{{else}}<div class="empty">Keine anstehenden Events.{{if .CanCreate}} <a href="/events/new">Lege das erste an.</a>{{end}}</div>{{end}}

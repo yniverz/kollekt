@@ -45,7 +45,7 @@ func (c *C) resolveModule(needEdit bool) *Module {
 		}
 		return m
 	}
-	if c.Event == nil || m.Key == "overview" {
+	if c.Event == nil || m.Key == "overview" || len(m.Fields) == 0 {
 		c.Error(404, "Modul nicht gefunden.")
 		return nil
 	}
@@ -849,6 +849,11 @@ func (c *C) handleSave(w http.ResponseWriter, r *http.Request) {
 	if len(errs) > 0 {
 		c.renderForm(m, rec, vals, errs)
 		return
+	}
+	if key, ok := relDateKey[m.Key]; ok && c.Event != nil {
+		if d, ok := relDate(c.Event.Start, vals["rel"]); ok {
+			vals[key] = d
+		}
 	}
 	next := r.FormValue("next")
 	if next == "" {

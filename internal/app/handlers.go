@@ -48,6 +48,10 @@ func (a *App) routes() {
 	mux.HandleFunc("POST /e/{eid}/team", a.evt(a.teamSave))
 	mux.HandleFunc("POST /e/{eid}/team/{uid}/remove", a.evt(a.teamRemove))
 
+	mux.HandleFunc("GET /e/{eid}/zeitplan", a.evt(func(c *C) { c.handleTimeplan(c.W, c.R) }))
+	mux.HandleFunc("POST /e/{eid}/ical", a.evt(a.handleCalRegenerate))
+	mux.HandleFunc("GET /cal/{token}", a.icsHandler)
+
 	// custom pages
 	mux.HandleFunc("GET /e/{eid}/calc", a.evt(func(c *C) { c.handleCalc(c.W, c.R) }))
 	mux.HandleFunc("POST /e/{eid}/calc", a.evt(func(c *C) { c.handleCalcSave(c.W, c.R) }))

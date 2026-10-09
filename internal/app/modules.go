@@ -59,6 +59,11 @@ func init() {
 	})
 
 	reg(&Module{
+		Key: "timeplan", Name: "Zeitplan", Icon: "cal", Default: true, Order: 2, Page: "zeitplan",
+		Desc: "Alle Fristen und Termine des Events an einem Ort, mit Countdown zum Eventtag und Kalender-Abo.",
+	})
+
+	reg(&Module{
 		Key: "tasks", Name: "Aufgaben", Singular: "Aufgabe", Icon: "check", Default: true, Order: 2,
 		Desc:  "Alles, was erledigt werden muss. Mit Bereich, Zuständigkeit und Frist.",
 		Title: "title", Sort: "due", AreaField: "area", Filters: []string{"area", "assignee", "status"},
@@ -336,6 +341,10 @@ func init() {
 		},
 	})
 
+	// relative deadlines: derived from the event date and moved along with it
+	for key, after := range map[string]string{"tasks": "due", "permits": "deadline", "budget": "due"} {
+		insertAfter(modByKey[key], after, F("rel", "Frist relativ zum Event", TNumber).Unit("Tage vorher").Hint("Optional. Leitet die Frist aus dem Eventtermin ab und verschiebt sie mit. Negativ = nach dem Event."))
+	}
 	// net/gross handling: amounts can be entered net or gross with their own VAT rate.
 	for _, k := range []string{"budget", "lineup", "equipment", "loc_candidates", "bar_items"} {
 		insertBeforeNotes(modByKey[k], vatFields())
@@ -425,4 +434,43 @@ func joinTags(s string) []string {
 		}
 	}
 	return out
+}
+
+func insertAfter(m *Module, key string, f Field) {
+	for i := range m.Fields {
+		if m.Fields[i].Key == key {
+			out := append([]Field{}, m.Fields[:i+1]...)
+			out = append(out, f)
+			m.Fields = append(out, m.Fields[i+1:]...)
+			return
+		}
+	}
+	m.Fields = append(m.Fields, f)
+}
+
+// relDateKey names the date field a module derives from its "rel" field.
+var relDateKey = map[string]string{"tasks": "due", "permits": "deadline", "budget": "due"}
+
+// relDate returns the absolute date for "rel days before the event start".
+func relDate(eventStart, rel string) (string, bool) {
+	if rel == "" {
+		return "", false
+	}
+	t, ok := parseDT(eventStart)
+	if !ok {
+		return "", false
+	}
+	return t.AddDate(0, 0, -int(parseNum(rel))).Format("2006-01-02"), true
+}
+
+// applyRelative recomputes all relative deadlines of an event.
+func (a *App) applyRelative(e *Event) {
+	for mod, key := range relDateKey {
+		for _, r := range a.recs(e.ID, mod) {
+			if d, ok := relDate(e.Start, r.S("rel")); ok && r.S(key) != d {
+				r.D[key] = d
+				_ = a.saveRec(r)
+			}
+		}
+	}
 }

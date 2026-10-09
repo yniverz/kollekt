@@ -71,6 +71,7 @@ func (a *App) eventCreate(c *C) {
 	}
 	if payload != nil {
 		a.instantiate(e, *payload, c.User.ID)
+		a.applyRelative(e)
 	}
 	for _, rl := range a.roles() {
 		if rl.Name == "Orga-Leitung" {
@@ -166,6 +167,7 @@ func (a *App) settingsSave(c *C) {
 		c.Error(500, "Speichern fehlgeschlagen.")
 		return
 	}
+	a.applyRelative(e)
 	a.logAudit(c.User.ID, e.ID, "event", e.ID, "Einstellungen geändert", e.Name)
 	c.setFlash("Einstellungen gespeichert.")
 	c.Redirect("/e/" + itoa(e.ID) + "/")

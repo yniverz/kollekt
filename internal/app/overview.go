@@ -328,9 +328,16 @@ type MyTask struct {
 	Late                    bool
 }
 
+type DashDeadline struct {
+	Event, Title, Label, Color, Date, Link string
+	Days                                   int
+	Late                                   bool
+}
+
 func (c *C) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	var upcoming, past []*EventRow
 	var mine []MyTask
+	var deadlines []DashDeadline
 	members := map[int64]*Member{}
 	if !c.User.IsAdmin {
 		members = c.A.memberEvents(c.User.ID)
@@ -370,6 +377,14 @@ func (c *C) handleDashboard(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+		if e.Has("timeplan") && s.Level("timeplan") >= 1 {
+			entries, _ := s.timeEntries()
+			for _, en := range entries {
+				if en.Days <= 14 && (en.Kind == "permit" || en.Kind == "pay" || en.Kind == "gear" || (en.Kind == "task" && !en.Mine)) {
+					deadlines = append(deadlines, DashDeadline{e.Name, en.Title, en.Label, en.Color, en.Raw, fmt.Sprintf("/e/%d/zeitplan", e.ID), en.Days, en.Late})
+				}
+			}
+		}
 		if e.Has("calc") && s.Level("calc") >= 1 && !s.scoped() {
 			row.ShowProfit = true
 			row.Profit = s.finance(s.Baseline()).Profit
@@ -394,9 +409,13 @@ func (c *C) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	if len(mine) > 12 {
 		mine = mine[:12]
 	}
+	sort.SliceStable(deadlines, func(i, j int) bool { return deadlines[i].Date < deadlines[j].Date })
+	if len(deadlines) > 12 {
+		deadlines = deadlines[:12]
+	}
 	sort.SliceStable(past, func(i, j int) bool { return past[i].E.Start > past[j].E.Start })
 	c.Page("dashboard.html", map[string]any{
-		"Title": "Events", "Upcoming": upcoming, "Past": past, "Mine": mine, "CanCreate": c.User.IsAdmin || c.User.CanCreate,
+		"Title": "Events", "Upcoming": upcoming, "Past": past, "Mine": mine, "Deadlines": deadlines, "CanCreate": c.User.IsAdmin || c.User.CanCreate,
 	})
 }
 

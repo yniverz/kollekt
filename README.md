@@ -11,6 +11,7 @@ Kollekt ist **kein Ticketsystem und keine Kasse**. Es dient der Planung und dem 
 | **Events** | Anlegen aus Vorlage (Techno Open Air, Club Night, Kleines Oktoberfest, Leer), duplizieren, eigene Vorlagen aus bestehenden Events |
 | **Module pro Event** | Jedes Modul lässt sich pro Event ein- und ausschalten |
 | **Bereiche** | Bar, Technik, Einlass … mit Leitung, Kostenlimit und Live-Überblick (Aufgaben, Besetzung, Kosten) |
+| **Zeitplan** | Alle offenen Fristen und Termine (Aufgaben, Anträge, Zahlungen, Materialtermine) nach Kalenderwoche, mit „T−Tage“ bis zum Event, Filter „nur meine“ und Kalender-Abo (iCal) |
 | **Aufgaben** | Bereich, Zuständigkeit, Frist, Priorität, Status direkt in der Liste änderbar |
 | **Genehmigungen** | Behörde, Antragsfrist, Status, Aktenzeichen, Auflagen, Gebühr |
 | **Location-Suche** | Locations anfragen, Angebote vergleichen, eine als gewählt festlegen |
@@ -71,6 +72,12 @@ Go 1.26, keine CGO-Abhängigkeit (SQLite über `modernc.org/sqlite`), Oberfläch
 * `internal/app/modules.go` beschreibt alle Module deklarativ (Felder, Listenspalten, Filter, Gruppierung, Rechte). Ein neues Modul braucht dort nur einen Eintrag; Liste, Formular, Rechteprüfung und Vorlagen funktionieren generisch.
 * `calc.go` und `bar.go` enthalten die Finanz- und Bar-Berechnung, `extras.go` die modulspezifischen Ansichten (Zeitleiste, Besetzung, Bereichskarten).
 * `seed.go` enthält die mitgelieferten Rollen und Event-Vorlagen. Preise in den Bar-Vorlagen sind Beispielwerte.
+
+## Fristen und Kalender
+
+* **Relative Fristen:** Bei Aufgaben, Genehmigungen und Budget-Posten kannst du „Frist relativ zum Event“ setzen (z. B. 42 Tage vorher, negativ = nach dem Event). Das Datum wird aus dem Eventtermin berechnet und wandert mit, wenn du den Termin änderst. Die mitgelieferten Vorlagen bringen Vorschläge für Vorlaufzeiten mit. Das sind grobe Richtwerte, keine amtlichen Fristen.
+* **Kalender-Abo:** Auf der Zeitplan-Seite erzeugst du einen persönlichen `.ics`-Link. Er enthält Fristen (mit Erinnerung am Vortag um 9 Uhr), das Event, Line-up, Ablaufplan und deine eigenen Schichten, aber keine Beträge. Der Link wird nur einmal angezeigt, ist nur als Hash gespeichert und lässt sich jederzeit erneuern oder widerrufen. Er zeigt nur, was du in Kollekt sehen darfst, und wird ungültig, wenn du aus dem Event entfernt wirst.
+* Das Dashboard zeigt Fristen der nächsten 14 Tage über alle deine Events.
 
 ## Netto und Brutto
 

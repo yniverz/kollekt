@@ -261,7 +261,15 @@ func (c *C) Level(perm string) int {
 	if perm == "overview" {
 		return 1
 	}
-	return c.Mem.Role.Perms[perm]
+	if l, ok := c.Mem.Role.Perms[perm]; ok {
+		return l
+	}
+	if perm == "timeplan" { // roles older than this module: read access if they can see tasks
+		if c.Mem.Role.Perms["tasks"] >= 1 {
+			return 1
+		}
+	}
+	return 0
 }
 
 func (c *C) CanEdit(perm string) bool { return c.Level(perm) >= 2 }

@@ -67,6 +67,8 @@
     if (el.matches('[data-autosubmit]')) { el.form.submit(); }
   });
 
+  document.addEventListener('focusin', function (e) { if (e.target.matches('[data-selectall]')) e.target.select(); });
+
   // dynamic rows (calculator)
   document.addEventListener('click', function (e) {
     var add = e.target.closest('[data-add-row]');

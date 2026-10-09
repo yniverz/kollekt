@@ -15,6 +15,7 @@ func allPerms(level int) map[string]int {
 }
 
 func (a *App) seed() {
+	defer a.migrateTimeplan()
 	var n int
 	_ = a.db.QueryRow("SELECT COUNT(*) FROM roles").Scan(&n)
 	if n == 0 {
@@ -69,8 +70,38 @@ func (b *tb) area(name, color string) {
 	b.recs = append(b.recs, TplRec{Module: "areas", Orig: id, D: map[string]string{"name": name, "color": color}})
 }
 
+// relDays are suggested lead times (days before the event) for template items; adjust to your case.
+var relDays = map[string]int{
+	// tasks
+	"Termin und Location festlegen": 120, "Genehmigungsliste durchgehen und Fristen eintragen": 110, "Line-up buchen und Verträge schicken": 90,
+	"Flyer, Artwork und Social-Media-Plan": 56, "Vorverkauf / Tickets organisieren": 49, "Soundsystem, Licht und Strom klären": 45,
+	"Toiletten, Wasser und Müllcontainer bestellen": 35, "Barbedarf kalkulieren und bestellen": 14, "Helfer:innen suchen und Schichtplan abstimmen": 28,
+	"Sicherheits- und Sanitätsdienst abstimmen": 42, "Abbau, Endreinigung und Müll": -1, "Kassensturz und Abrechnung": -2,
+	"Termin und Location bestätigen": 60, "Line-up und Gagen klären": 45, "Flyer und Social Media": 35, "Barbedarf bestellen": 10,
+	"Schichtplan erstellen": 14, "Soundcheck und Technik-Rider abstimmen": 7,
+	"Termin, Platz und Zelt klären": 120, "Brauerei: Fassbier, Kühlung und Zapfanlage": 60, "Speisekarte kalkulieren": 45, "Band und Musik buchen": 75,
+	"Biertischgarnituren und Geschirr besorgen": 30, "Becher- und Krugpfand organisieren": 21, "Helfer:innen und Schichten planen": 28,
+	"Dekoration (Blau-Weiß, Girlanden)": 14, "Abbau und Endreinigung": -1,
+	// permits
+	"Veranstaltung anmelden (Veranstaltungsleitfaden)": 84, "Vorübergehender Gaststättenbetrieb (Alkoholausschank)": 28, "Vorübergehender Gaststättenbetrieb (Bier, Speisen)": 28,
+	"Sperrzeit und Lärmschutz klären": 28, "Fläche: Zustimmung Eigentümer oder Sondernutzung öffentlicher Grund": 90,
+	"Verkehrsrechtliche Anordnung (Sperrung, Parken, Zufahrt)": 42, "Sicherheitskonzept (Besucherzahl, Fluchtwege, Ordnungsdienst)": 60, "Sicherheitskonzept": 60,
+	"Bühne und Zelte: Fliegende Bauten anzeigen / abnehmen": 21, "Festzelt: Fliegender Bau anzeigen / Gebrauchsabnahme": 21,
+	"Versammlungsstättenrecht prüfen (VStättVO Baden-Württemberg)": 90, "Brandschutz, Zufahrten, Rettungswege": 42, "Brandschutz, Fluchtwege, Zufahrten": 42,
+	"Sanitätsdienst buchen": 42, "Sanitätsdienst": 42, "Naturschutz / Landschaftsschutz prüfen": 90, "Jugendschutz: Aushang und Alterskontrolle": 14,
+	"Jugendschutz: Aushang und Kontrollen": 14, "Lebensmittelrecht bei Speisen anmelden": 28, "Lebensmittelhygiene und Belehrung der Helfer": 28,
+	"GEMA-Anmeldung": 14, "Künstlersozialabgabe prüfen": 7, "Vergnügungssteuer: Pflicht bei der Stadt erfragen": 28, "Veranstalterhaftpflicht abschließen": 30,
+	"Veranstalterhaftpflicht": 30, "Veranstalterhaftpflicht prüfen": 30, "Müll- und Reinigungskonzept": 28, "Müll-, Spül- und Mehrwegkonzept": 28,
+	"Mietvertrag mit der Location": 60, "Deckt die Konzession der Location die Veranstaltung?": 42, "Veranstaltung anmelden bzw. mit dem Amt abstimmen": 42,
+}
+
 func (b *tb) add(mod string, kv string) int64 {
 	d := parseKV(kv)
+	if mod == "tasks" || mod == "permits" {
+		if n, ok := relDays[d["title"]]; ok {
+			d["rel"] = itoa(int64(n))
+		}
+	}
 	if a, ok := d["area"]; ok {
 		if id, ok := b.areas[a]; ok {
 			d["area"] = itoa(id)

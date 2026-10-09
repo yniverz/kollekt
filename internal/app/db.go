@@ -90,6 +90,14 @@ CREATE TABLE IF NOT EXISTS files (
 );
 CREATE INDEX IF NOT EXISTS idx_files_rec ON files(record_id);
 CREATE INDEX IF NOT EXISTS idx_files_event ON files(event_id);
+CREATE TABLE IF NOT EXISTS cal_tokens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  created_at INTEGER NOT NULL,
+  UNIQUE(event_id, user_id)
+);
 CREATE TABLE IF NOT EXISTS audit (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   ts INTEGER NOT NULL,
@@ -350,6 +358,7 @@ func (a *App) deleteEvent(id int64) {
 	a.removeFilesOfEvent(id)
 	_, _ = a.db.Exec("DELETE FROM records WHERE event_id=?", id)
 	_, _ = a.db.Exec("DELETE FROM audit WHERE event_id=?", id)
+	_, _ = a.db.Exec("DELETE FROM cal_tokens WHERE event_id=?", id)
 	_, _ = a.db.Exec("DELETE FROM events WHERE id=?", id)
 }
 

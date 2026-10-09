@@ -1,0 +1,62 @@
+{{define "content"}}
+<div class="page-head">
+  <div>
+    <h1>Zeitplan</h1>
+    <p class="sub">Alle Fristen und Termine, die offen sind: Aufgaben, Anträge, Zahlungen und Materialtermine.
+    {{if .HasEvent}}{{if gt .DaysToEvent 0}}<b>Noch {{.DaysToEvent}} Tage</b> bis zum Event.{{else if eq .DaysToEvent 0}}<b>Heute ist das Event.</b>{{else}}Das Event liegt {{abs (float .DaysToEvent)}} Tage zurück.{{end}}{{else}}Setze in den Einstellungen einen Eventtermin, dann zeigt der Zeitplan „T−Tage“ und relative Fristen werden berechnet.{{end}}</p>
+  </div>
+</div>
+
+<div class="kpis" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
+  <div class="kpi {{if .Late}}bad{{end}}"><div class="l">Überfällig</div><div class="v">{{.Late}}</div><div class="s">&nbsp;</div></div>
+  <div class="kpi"><div class="l">Diese Woche</div><div class="v">{{.ThisWeek}}</div><div class="s">&nbsp;</div></div>
+  <div class="kpi"><div class="l">Offene Termine</div><div class="v">{{.Total}}</div><div class="s">{{if .Undated}}{{len .Undated}} ohne Datum{{else}}&nbsp;{{end}}</div></div>
+</div>
+
+<form class="filters" method="get" action="/e/{{.Event.ID}}/zeitplan">
+  <select name="type" data-autosubmit aria-label="Art">{{range .Kinds}}<option value="{{.V}}" {{if eq .V $.Kind}}selected{{end}}>{{.L}}</option>{{end}}</select>
+  <label class="toggle"><input type="checkbox" name="mine" value="1" {{if .Mine}}checked{{end}} data-autosubmit> Nur meine</label>
+</form>
+
+{{if .Groups}}
+{{range .Groups}}
+<div class="panel flat" style="margin-bottom:14px">
+  <h2 {{if .Late}}class="bad"{{end}}>{{.Label}}{{if .Sub}} <span class="muted" style="font-family:var(--sans);font-size:13px;font-weight:400">· {{.Sub}}</span>{{end}}</h2>
+  <table class="tbl compact"><tbody>
+  {{range .Entries}}
+    <tr {{if eq .Kind "event"}}style="background:var(--c-red-bg)"{{end}}>
+      <td class="nowrap {{if .Late}}late{{end}}" style="width:130px">{{if .AllDay}}{{date .Raw}}{{else}}{{dt .Raw}}{{end}}</td>
+      <td class="nowrap muted" style="width:60px">{{if .HasT}}{{if eq .TMinus 0}}Tag X{{else if gt .TMinus 0}}T−{{.TMinus}}{{else}}T+{{abs (float .TMinus)}}{{end}}{{end}}</td>
+      <td class="title">{{if eq .Kind "event"}}<b>{{.Title}}</b>{{else if .CanEdit}}<a data-modal href="{{.EditURL}}">{{.Title}}</a>{{else}}<a href="{{.ListURL}}">{{.Title}}</a>{{end}}</td>
+      <td>{{badge .Label .Color}}</td>
+      <td class="muted">{{.Area}}</td>
+      <td class="muted">{{.Who}}{{if .Mine}} <span class="badge b-green">du</span>{{end}}</td>
+      <td class="muted">{{.Status}}</td>
+    </tr>
+  {{end}}
+  </tbody></table>
+</div>
+{{end}}
+{{else}}<div class="tblwrap"><div class="empty">Keine offenen Termine{{if or .Kind .Mine}} für diesen Filter{{end}}.</div></div>{{end}}
+
+{{if .Undated}}
+<details class="panel d"><summary>{{len .Undated}} offene Punkte ohne Frist</summary>
+  <ul class="alist" style="margin-top:8px">{{range .Undated}}<li><span class="when">{{.Kind}}</span><a href="{{.URL}}">{{.Title}}</a></li>{{end}}</ul>
+  <p class="muted small" style="margin:8px 0 0">Tipp: In Aufgaben und Genehmigungen kannst du „Frist relativ zum Event“ setzen, z. B. 42 Tage vorher.</p>
+</details>
+{{end}}
+
+<div class="panel" style="margin-top:18px">
+  <h2>Kalender-Abo</h2>
+  <p class="muted small">Trägt Fristen, Event, Line-up, Ablaufplan und deine Schichten in Apple Kalender, Google Kalender oder Outlook ein. Fristen erinnern am Vortag um 9 Uhr. Der Link gehört nur dir und zeigt, was du in Kollekt sehen darfst. Beträge und Gagen stehen nicht im Kalender.</p>
+  {{if .ICalLink}}
+    <div class="field"><label class="lbl" for="ical">Dein Kalender-Link (wird nur jetzt angezeigt)</label><input id="ical" readonly value="{{.ICalLink}}" data-selectall style="font-family:ui-monospace,monospace"></div>
+    <p class="muted small">In Kalender-App „Kalender abonnieren“ bzw. „Per URL hinzufügen“ wählen. Mit einem Link hinter <code>https://</code> funktioniert das am zuverlässigsten.</p>
+  {{end}}
+  <form method="post" action="/e/{{.Event.ID}}/ical" class="actions">
+    <input type="hidden" name="_csrf" value="{{.CSRF}}">
+    <button class="btn" {{if .HasLink}}data-confirm="Der alte Link funktioniert danach nicht mehr. Fortfahren?"{{end}}>{{if .HasLink}}Neuen Link erzeugen{{else}}Link erzeugen{{end}}</button>
+    {{if .HasLink}}<button class="btn ghost" name="revoke" value="1" data-confirm="Link widerrufen?">Widerrufen</button>{{end}}
+  </form>
+</div>
+{{end}}

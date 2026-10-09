@@ -9,6 +9,7 @@ Sicherheitslücken bitte **nicht** als öffentliches Issue melden, sondern über
 * Anmeldeversuche sind begrenzt (pro Konto und IP).
 * Jede Abfrage prüft Event-Mitgliedschaft, Modulrecht und Bereichszuordnung auf dem Server. Ausgeblendete Felder werden nicht ausgeliefert.
 * Strikte Content-Security-Policy ohne Inline-Skripte, `X-Frame-Options: DENY`, `nosniff`.
+* Kalender-Abo-Links sind zufällig (192 Bit), werden nur als Hash gespeichert, sind pro Person und Event widerrufbar und enthalten keine Beträge.
 * Anhänge liegen unter zufälligen Namen im Datenordner und werden nur als Download (`attachment`, `application/octet-stream`) ausgeliefert.
 * Datenordner und Datenbank sind nur für den Prozessbenutzer lesbar. Der Container läuft ohne Root-Rechte.
 
