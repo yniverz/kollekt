@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 )
 
 func allPerms(level int) map[string]int {
@@ -25,10 +26,10 @@ func (a *App) seed() {
 		orga := allPerms(2)
 		fin := allPerms(1)
 		fin["budget"], fin["calc"], fin["fin"] = 2, 2, 2
-		bereich := map[string]int{"areas": 1, "tasks": 2, "budget": 2, "equipment": 2, "staff": 2, "timeline": 1, "notes": 2, "permits": 1, "lineup": 1, "bar": 1, "sitemap": 2}
-		bar := map[string]int{"areas": 1, "tasks": 2, "budget": 2, "equipment": 2, "staff": 2, "timeline": 1, "notes": 2, "bar": 2, "lineup": 1, "sitemap": 2}
-		booking := map[string]int{"areas": 1, "tasks": 2, "lineup": 2, "timeline": 2, "notes": 2, "fin": 1, "budget": 1, "permits": 1, "sitemap": 1}
-		helfer := map[string]int{"sitemap": 1, "areas": 1, "tasks": 1, "staff": 1, "timeline": 1, "notes": 1}
+		bereich := map[string]int{"areas": 1, "tasks": 2, "budget": 2, "equipment": 2, "staff": 2, "timeline": 1, "notes": 2, "permits": 1, "lineup": 1, "bar": 1, "sitemap": 2, "checklists": 2, "power": 1, "logistics": 1, "neighbors": 1}
+		bar := map[string]int{"areas": 1, "tasks": 2, "budget": 2, "equipment": 2, "staff": 2, "timeline": 1, "notes": 2, "bar": 2, "lineup": 1, "sitemap": 2, "checklists": 2, "power": 1, "logistics": 1, "neighbors": 1}
+		booking := map[string]int{"areas": 1, "tasks": 2, "lineup": 2, "timeline": 2, "notes": 2, "fin": 1, "budget": 1, "permits": 1, "sitemap": 1, "checklists": 1}
+		helfer := map[string]int{"sitemap": 1, "checklists": 1, "areas": 1, "tasks": 1, "staff": 1, "timeline": 1, "notes": 1}
 		read := allPerms(1)
 		read["settings"] = 0
 		for _, r := range []*Role{
@@ -203,6 +204,27 @@ func builtinTemplates() []*Template {
 	for _, l := range []string{"title=Location-Miete|category=Location|kind=exp", "title=Sicherheitsdienst|category=Security|kind=exp", "title=Versicherung und Gebühren|category=Versicherung & Gebühren|kind=exp", "title=Werbung (Druck, Ads)|category=Werbung|kind=exp", "title=Sponsoring|category=Sponsoring|kind=inc"} {
 		b.add("budget", l+"|qty=1|scale=fix|status=planned")
 	}
+	for _, cl := range [][2]string{
+		{"Vor Einlass", "Fluchtwege frei, Ausgänge beleuchtet und gekennzeichnet"}, {"Vor Einlass", "Feuerlöscher an Bar, Technik und Küche geprüft"},
+		{"Vor Einlass", "Strom und Verteiler von der Elektrofachkraft abgenommen"}, {"Vor Einlass", "Bühne und Zelte abgenommen (Prüfbuch liegt vor)"},
+		{"Vor Einlass", "Sanitäts- und Ordnungsdienst eingewiesen, Funkcheck gemacht"}, {"Vor Einlass", "Erste-Hilfe-Material und Wasserstelle bereit"},
+		{"Vor Einlass", "Toiletten sauber, Handwaschmöglichkeit vorhanden"}, {"Vor Einlass", "Boxen ausgerichtet, Pegel abgestimmt"},
+		{"Vor Einlass", "Jugendschutz-Aushang hängt, Kasse und Wechselgeld bereit"},
+		{"Aufbau", "Absperrungen und Beschilderung stellen"}, {"Aufbau", "Strom verlegen und Verteiler beschriften"}, {"Aufbau", "Sound und Licht aufbauen, Soundcheck"},
+		{"Aufbau", "Bar, Kühlung und Zapfanlage aufbauen"}, {"Aufbau", "Müllstationen und Pfandrückgabe aufstellen"},
+		{"Abbau", "Müll sammeln, Gelände abgehen"}, {"Abbau", "Pfand abrechnen, Leergut zurückgeben"}, {"Abbau", "Geliehenes Material zurückbringen"},
+		{"Abbau", "Zustand des Geländes fotografieren (Übergabe)"}, {"Abbau", "Kassensturz durchführen und dokumentieren"},
+		{"Packliste Bar", "Wechselgeld, Kassenblock, Stifte"}, {"Packliste Bar", "Becher, Strohhalme, Servietten"}, {"Packliste Bar", "Eis, Zitronen, Flaschenöffner, Messer"},
+		{"Packliste Bar", "Gaffa, Kabelbinder, Müllsäcke, Putzzeug"},
+	} {
+		b.add("checklists", "list="+cl[0]+"|title="+cl[1]+"|status=open")
+	}
+	src := b.add("power", "name=Stromaggregat|kind=source|watts=20000|volt=400|fuse=32|notes=Beispielwert, bitte anpassen")
+	hv := b.add("power", fmt.Sprintf("name=Hauptverteiler|kind=dist|parent=%d|volt=400|fuse=32", src))
+	for _, l := range []string{"PA / Soundsystem|6000|80", "Lichtanlage|3000|100", "DJ- und Bühnentechnik|800|100", "Bar (Kühlung, Zapfanlage)|3500|70", "Geländebeleuchtung|1200|100"} {
+		p := strings.Split(l, "|")
+		b.add("power", fmt.Sprintf("name=%s|kind=load|parent=%d|watts=%s|qty=1|simult=%s|volt=400|notes=Beispielwert, bitte anpassen", p[0], hv, p[1], p[2]))
+	}
 	pils := b.item("name=Pils (Fass 50 l)|category=Bier|pack=Fass 50 l|unit=l|content=50|price=140|deposit=30|waste=8|returnable=1|notes=Beispielwert, bitte anpassen")
 	mate := b.item("name=Club-Mate (Kasten 20×0,5 l)|category=Softdrinks|pack=Kasten 20×0,5 l|unit=Stk|content=20|price=21|deposit=4.5|notes=Beispielwert, bitte anpassen")
 	cola := b.item("name=Cola (Kasten 24×0,33 l)|category=Softdrinks|pack=Kasten 24×0,33 l|unit=Stk|content=24|price=16|deposit=5.1|notes=Beispielwert, bitte anpassen")
@@ -255,6 +277,12 @@ func builtinTemplates() []*Template {
 	}
 	for _, l := range []string{"title=Location-Miete|category=Location|kind=exp", "title=Technik-Miete|category=Technik|kind=exp", "title=Werbung|category=Werbung|kind=exp"} {
 		b.add("budget", l+"|qty=1|scale=fix|status=planned")
+	}
+	for _, cl := range []string{"Fluchtwege frei und gekennzeichnet", "Soundcheck gemacht, Pegel mit der Location abgestimmt", "Garderobe und Kasse bereit, Wechselgeld da", "Jugendschutz-Aushang hängt", "Ordnungs- und Barteam eingewiesen"} {
+		b.add("checklists", "list=Vor Einlass|title="+cl+"|status=open")
+	}
+	for _, cl := range []string{"Becher, Eis, Zitronen", "Wechselgeld und Kassenblock", "Gaffa, Müllsäcke, Putzzeug"} {
+		b.add("checklists", "list=Packliste Bar|title="+cl+"|status=open")
 	}
 	out = append(out, &Template{
 		Name: "Club Night (Indoor)", Description: "Abend im Club oder einer gemieteten Halle mit kleiner Genehmigungsliste für Karlsruhe / Baden-Württemberg.",
@@ -321,6 +349,12 @@ func builtinTemplates() []*Template {
 	b.prod("name=Brezn|stand=Foodstand|category=Essen|price=3|pp=0.5", brezn, 1.0)
 	b.prod("name=Weißwurst-Paar|stand=Foodstand|category=Essen|price=5|pp=0.3", wurst, 2.0)
 	b.prod("name=Hendl halb|stand=Foodstand|category=Essen|price=11|pp=0.3", hendl, 1.0)
+	for _, cl := range []string{"Fluchtwege im Zelt frei, Ausgänge gekennzeichnet", "Feuerlöscher und Erste-Hilfe-Material bereit", "Strom abgenommen, Zeltprüfbuch liegt vor", "Handwaschmöglichkeit und Hygieneregeln in der Küche", "Pfandsystem erklärt, Kasse und Wechselgeld bereit", "Jugendschutz-Aushang hängt"} {
+		b.add("checklists", "list=Vor Einlass|title="+cl+"|status=open")
+	}
+	for _, cl := range []string{"Zelt, Bänke und Tische aufbauen", "Zapfanlage und Kühlung anschließen", "Küche aufbauen und Wasser anschließen", "Dekoration anbringen"} {
+		b.add("checklists", "list=Aufbau|title="+cl+"|status=open")
+	}
 	out = append(out, &Template{
 		Name: "Kleines Oktoberfest", Description: "Festzelt mit Bierstand, Essen, Pfandsystem und Genehmigungen für Karlsruhe / Baden-Württemberg inkl. Hygiene und Zeltabnahme.",
 		Payload: TplPayload{Modules: mods, Records: b.recs, Settings: calcSeed(250)},

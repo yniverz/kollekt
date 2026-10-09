@@ -5,12 +5,15 @@ package app
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"database/sql"
 	"embed"
+	"encoding/hex"
 	"fmt"
 	"html/template"
 	"io/fs"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -29,6 +32,7 @@ type Config struct {
 	AdminPass     string
 	TrustProxy    bool
 	MapsOff       bool
+	WeatherOff    bool
 	TileURL       string
 	TileAttrib    string
 	GeocoderURL   string
@@ -43,6 +47,7 @@ func ConfigFromEnv() Config {
 		AdminPass:     os.Getenv("KOLLEKT_ADMIN_PASSWORD"),
 		TrustProxy:    env("KOLLEKT_TRUST_PROXY", "") == "1",
 		MapsOff:       strings.EqualFold(env("KOLLEKT_MAPS", ""), "off"),
+		WeatherOff:    strings.EqualFold(env("KOLLEKT_WEATHER", ""), "off"),
 		TileURL:       env("KOLLEKT_TILE_URL", "https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
 		TileAttrib:    env("KOLLEKT_TILE_ATTRIBUTION", "© OpenStreetMap-Mitwirkende"),
 		GeocoderURL:   env("KOLLEKT_GEOCODER_URL", "https://nominatim.openstreetmap.org/search"),
@@ -57,10 +62,11 @@ func env(k, d string) string {
 }
 
 type App struct {
-	cfg Config
-	db  *sql.DB
-	tpl map[string]*template.Template
-	mux *http.ServeMux
+	cfg      Config
+	assetVer string
+	db       *sql.DB
+	tpl      map[string]*template.Template
+	mux      *http.ServeMux
 }
 
 // Run starts the server.
@@ -69,6 +75,7 @@ func Run(cfg Config) error {
 		return err
 	}
 	trustProxy = cfg.TrustProxy
+	weatherOff = cfg.WeatherOff
 	mapCfg = MapConfig{Enabled: !cfg.MapsOff, TileURL: cfg.TileURL, Attribution: cfg.TileAttrib, GeocoderURL: cfg.GeocoderURL}
 	db, err := openDB(cfg.DataDir)
 	if err != nil {
@@ -118,7 +125,23 @@ func (a *App) bootstrapAdmin() {
 
 // ---------- templates ----------
 
+// computeAssetVersion hashes all embedded static files so browsers fetch new JS/CSS after an update.
+func (a *App) computeAssetVersion() {
+	h := sha256.New()
+	_ = fs.WalkDir(webFS, "web/static", func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		b, _ := webFS.ReadFile(p)
+		h.Write([]byte(p))
+		h.Write(b)
+		return nil
+	})
+	a.assetVer = hex.EncodeToString(h.Sum(nil))[:10]
+}
+
 func (a *App) loadTemplates() error {
+	a.computeAssetVersion()
 	a.tpl = map[string]*template.Template{}
 	entries, err := fs.ReadDir(webFS, "web/templates")
 	if err != nil {
@@ -230,9 +253,11 @@ func (a *App) funcs(self *template.Template) template.FuncMap {
 			}
 			return f
 		},
-		"neg":   func(f float64) bool { return f < 0 },
-		"itoa":  itoa,
-		"split": joinTags,
+		"neg":     func(f float64) bool { return f < 0 },
+		"div1000": func(f float64) float64 { return f / 1000 },
+		"minf":    func(a, b float64) float64 { return math.Min(a, b) },
+		"itoa":    itoa,
+		"split":   joinTags,
 	}
 }
 
@@ -287,6 +312,14 @@ func rolePerm(p map[string]int, key string) int {
 		return min(p["tasks"], 1)
 	case "sitemap":
 		return min(p["areas"], 1)
+	case "power", "logistics":
+		return min(p["equipment"], 1)
+	case "checklists":
+		return p["tasks"]
+	case "neighbors":
+		return min(p["permits"], 1)
+	case "retro":
+		return min(p["calc"], 1)
 	}
 	return 0
 }
@@ -387,10 +420,12 @@ func (c *C) Error(code int, msg string) {
 type NavItem struct {
 	Key, Label, Icon, URL string
 	Active                bool
+	Heading               string // section title shown above this item
 }
 
 func (c *C) eventNav(active string) []NavItem {
 	var out []NavItem
+	lastGroup := ""
 	for _, m := range eventModules() {
 		if m.Key != "overview" && !m.Core && !c.Event.Has(m.Key) {
 			continue
@@ -404,7 +439,12 @@ func (c *C) eventNav(active string) []NavItem {
 		} else if m.Page != "" {
 			u = fmt.Sprintf("/e/%d/%s", c.Event.ID, m.Page)
 		}
-		out = append(out, NavItem{m.Key, m.Name, m.Icon, u, m.Key == active})
+		item := NavItem{Key: m.Key, Label: m.Name, Icon: m.Icon, URL: u, Active: m.Key == active}
+		if m.NavGroup != lastGroup {
+			item.Heading = m.NavGroup
+			lastGroup = m.NavGroup
+		}
+		out = append(out, item)
 	}
 	return out
 }
@@ -420,6 +460,7 @@ func (c *C) renderTpl(name string, data map[string]any) {
 	}
 	data["User"] = c.User
 	data["Maps"] = mapCfg
+	data["AssetV"] = c.A.assetVer
 	data["SourceURL"] = env("KOLLEKT_SOURCE_URL", "https://github.com/yniverz/kollekt")
 	if c.Sess != nil {
 		data["CSRF"] = c.Sess.CSRF

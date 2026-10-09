@@ -348,6 +348,126 @@ func TestCSPAllowsOnlyConfiguredMapHosts(t *testing.T) {
 	}
 }
 
+func TestPowerTreeLoadsAndOverload(t *testing.T) {
+	a, e, c := testApp(t)
+	e.Modules = []string{"power"}
+	mk := func(d map[string]string) int64 {
+		r := &Rec{EventID: e.ID, Module: "power", D: d}
+		_ = a.saveRec(r)
+		return r.ID
+	}
+	src := mk(map[string]string{"name": "Aggregat", "kind": "source", "watts": "10000", "volt": "400"})
+	dist := mk(map[string]string{"name": "Verteiler", "kind": "dist", "parent": itoa(src), "volt": "400", "fuse": "16"})
+	mk(map[string]string{"name": "PA", "kind": "load", "parent": itoa(dist), "watts": "4000", "qty": "1", "simult": "100"})
+	mk(map[string]string{"name": "Licht", "kind": "load", "parent": itoa(dist), "watts": "150", "qty": "10", "simult": "80"}) // 1200 W
+	mk(map[string]string{"name": "Frei", "kind": "load", "watts": "500"})
+	v := c.powerTree()
+	if !near(v.Total, 5700) {
+		t.Fatalf("total = %v", v.Total)
+	}
+	var d, s *PowerRow
+	for _, r := range v.Rows {
+		switch r.R.S("name") {
+		case "Verteiler":
+			d = r
+		case "Aggregat":
+			s = r
+		}
+	}
+	if !near(d.Load, 5200) || d.Tone != "bad" { // 16 A * 400 V * sqrt3 * 0.9 = 9977 W capacity -> 52 % ... must stay under
+		if d.Tone == "bad" {
+			t.Fatalf("16A/400V distributor should carry 5.2 kW, tone = %s", d.Tone)
+		}
+	}
+	if !near(s.Load, 5200) || s.Pct < 50 || s.Pct > 53 {
+		t.Fatalf("source load %v pct %v", s.Load, s.Pct)
+	}
+	// overload the distributor
+	mk(map[string]string{"name": "Kochfeld", "kind": "load", "parent": itoa(dist), "watts": "9000", "qty": "1"})
+	c.invalidate()
+	if v = c.powerTree(); len(v.Warns) == 0 {
+		t.Fatal("overload not reported")
+	}
+}
+
+func TestPowerCycleDoesNotHang(t *testing.T) {
+	a, e, c := testApp(t)
+	a1 := &Rec{EventID: e.ID, Module: "power", D: map[string]string{"name": "A", "kind": "dist"}}
+	_ = a.saveRec(a1)
+	b1 := &Rec{EventID: e.ID, Module: "power", D: map[string]string{"name": "B", "kind": "dist", "parent": itoa(a1.ID)}}
+	_ = a.saveRec(b1)
+	a1.D["parent"] = itoa(b1.ID)
+	_ = a.saveRec(a1)
+	if v := c.powerTree(); len(v.Rows) != 2 {
+		t.Fatalf("rows = %d", len(v.Rows))
+	}
+}
+
+func TestTransportCost(t *testing.T) {
+	_, e, c := testApp(t)
+	r := &Rec{D: map[string]string{"km": "20", "trips": "2", "roundtrip": "1", "rate": "0.5", "flat": "10"}}
+	if km := c.fahrtKm(r); !near(km, 80) {
+		t.Fatalf("km = %v", km)
+	}
+	if got := c.fahrtCost(r); !near(got, 50) {
+		t.Fatalf("cost = %v", got)
+	}
+	if d := haversineKm(49.0069, 8.4037, 48.7758, 9.1829); d < 55 || d > 70 { // Karlsruhe - Stuttgart ~ 62 km
+		t.Fatalf("haversine = %v", d)
+	}
+	e.Modules = []string{"logistics"}
+	if f := c.finance(0); f.Expense != 0 {
+		t.Fatalf("no trips yet, expense = %v", f.Expense)
+	}
+}
+
+func TestWeatherWarnings(t *testing.T) {
+	if w := weatherWarn(WeatherDay{TMax: 20, TMin: 10, Rain: 0, RainPct: 10, Gust: 20}); len(w) != 0 {
+		t.Fatalf("calm day warned: %v", w)
+	}
+	if w := weatherWarn(WeatherDay{TMax: 33, TMin: 20, Rain: 12, RainPct: 80, Gust: 70}); len(w) != 3 {
+		t.Fatalf("expected rain, wind and heat warnings, got %v", w)
+	}
+}
+
+func TestNewModulePermissionFallback(t *testing.T) {
+	old := map[string]int{"tasks": 2, "equipment": 2, "areas": 1, "permits": 2, "calc": 2}
+	for key, want := range map[string]int{"timeplan": 1, "sitemap": 1, "power": 1, "logistics": 1, "checklists": 2, "neighbors": 1, "retro": 1} {
+		if got := rolePerm(old, key); got != want {
+			t.Errorf("rolePerm(%s) = %d, want %d", key, got, want)
+		}
+	}
+	if rolePerm(map[string]int{"tasks": 2}, "power") != 0 {
+		t.Error("no equipment access must mean no power access")
+	}
+}
+
+func TestDefaultLetterUsesEventData(t *testing.T) {
+	a, e, c := testApp(t)
+	loc := &Rec{Module: "locations", D: map[string]string{"name": "Waldlichtung"}}
+	_ = a.saveRec(loc)
+	e.Name, e.Start, e.End, e.LocationID = "Sommerfest", "2026-12-12T20:00", "2026-12-13T02:00", loc.ID
+	txt := c.defaultLetter(LetterSettings{Contact: "Mara", Phone: "0123", Until: "01:00"})
+	for _, want := range []string{"Sommerfest", "Waldlichtung", "20:00", "Mara", "0123", "spätestens um 01:00 Uhr"} {
+		if !strings.Contains(txt, want) {
+			t.Errorf("letter misses %q:\n%s", want, txt)
+		}
+	}
+}
+
+func TestChecklistTemplateRoundTrip(t *testing.T) {
+	a, e, _ := testApp(t)
+	_ = a.saveRec(&Rec{EventID: e.ID, Module: "checklists", D: map[string]string{"list": "Abbau", "title": "Müll", "status": "done"}})
+	p := a.snapshot(e, SnapOpts{})
+	e2 := &Event{Name: "N", Modules: p.Modules, Settings: map[string]jsonRaw{}}
+	_ = a.saveEvent(e2)
+	a.instantiate(e2, p, 1)
+	got := a.recs(e2.ID, "checklists")
+	if len(got) != 1 || got[0].S("status") != "open" {
+		t.Fatalf("checklist not reset in template copy: %+v", got)
+	}
+}
+
 func TestNumberParsing(t *testing.T) {
 	cases := map[string]float64{"1,5": 1.5, "1.234,56": 1234.56, "3.5": 3.5, "": 0, " 12 ": 12}
 	for in, want := range cases {

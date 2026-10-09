@@ -198,6 +198,57 @@ func (c *C) handleOverview(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if c.can("checklists") {
+		total, done := 0, 0
+		beforeDoors, openBefore := 0, 0
+		for _, r := range c.Recs("checklists") {
+			if !c.visible(modByKey["checklists"], r) {
+				continue
+			}
+			total++
+			if r.S("status") == "done" {
+				done++
+			}
+			if r.S("list") == "Vor Einlass" {
+				beforeDoors++
+				if r.S("status") != "done" {
+					openBefore++
+				}
+			}
+		}
+		if total > 0 {
+			v.KPIs = append(v.KPIs, KPI{"Checklisten", fmt.Sprintf("%d / %d", done, total), "", c.modLink("checklists"), ""})
+		}
+		if openBefore > 0 && v.HasDate && v.Days >= 0 && v.Days <= 1 {
+			v.Warns = append(v.Warns, Warn{fmt.Sprintf("Checkliste „Vor Einlass“: noch %d von %d Punkten offen", openBefore, beforeDoors), c.modLink("checklists") + "?f_list=Vor+Einlass", "bad"})
+		}
+	}
+	if c.can("neighbors") {
+		todo, informed, complaints, total := 0, 0, 0, 0
+		for _, r := range c.Recs("neighbors") {
+			total++
+			switch r.S("status") {
+			case "todo":
+				todo++
+			case "complaint":
+				complaints++
+			default:
+				informed++
+			}
+		}
+		if total > 0 {
+			v.KPIs = append(v.KPIs, KPI{"Anwohner informiert", fmt.Sprintf("%d / %d", informed+complaints, total), "", c.modLink("neighbors"), ""})
+		}
+		if complaints > 0 {
+			v.Warns = append(v.Warns, Warn{plural(complaints, "Beschwerde oder Rückfrage", "Beschwerden oder Rückfragen") + " aus der Nachbarschaft", c.modLink("neighbors") + "?f_status=complaint", "warn"})
+		}
+		if todo > 0 && v.HasDate && v.Days >= 0 && v.Days <= 14 {
+			v.Warns = append(v.Warns, Warn{fmt.Sprintf("%s noch nicht informiert, Event in %d Tagen", plural(todo, "Anwohner", "Anwohner"), v.Days), c.modLink("neighbors"), "warn"})
+		}
+	}
+	for _, w := range c.powerOverloads() {
+		v.Warns = append(v.Warns, Warn{"Strom: " + w, c.modLink("power"), "bad"})
+	}
 	// warnings
 	if e.Has("loc_candidates") && e.LocationID == 0 && c.Level("loc_candidates") >= 1 {
 		v.Warns = append(v.Warns, Warn{"Noch keine Location festgelegt", c.modLink("loc_candidates"), "warn"})
@@ -302,7 +353,7 @@ func (c *C) handleOverview(w http.ResponseWriter, r *http.Request) {
 	v.Pin = c.eventPin()
 	v.Audit = c.A.recentAudit(e.ID, 10)
 	v.Team = c.A.members(e.ID)
-	c.Page("overview.html", map[string]any{"Title": e.Name, "Nav": c.eventNav("overview"), "V": v, "EStatus": e.Status})
+	c.Page("overview.html", map[string]any{"Title": e.Name, "Nav": c.eventNav("overview"), "V": v, "EStatus": e.Status, "Weather": !weatherOff && e.Start != ""})
 }
 
 func (c *C) sub(e *Event) *C {

@@ -1,0 +1,30 @@
+{{define "content"}}
+<div class="page-head"><div><h1>Event-Vergleich</h1><p class="sub">Alle deine Events nebeneinander, mit Ist-Werten wo vorhanden, sonst Plan. Beträge in der Basis des jeweiligen Events.</p></div></div>
+{{if .Rows}}
+<div class="tblwrap"><table class="tbl">
+  <thead><tr><th>Event</th><th>Datum</th><th class="num">Gäste</th><th class="num">Einnahmen</th><th class="num">Ausgaben</th><th class="num">Ergebnis</th><th class="num">Marge</th><th class="num">Einnahmen/Gast</th><th class="num">Kosten/Gast</th><th class="num">Ergebnis/Gast</th></tr></thead>
+  <tbody>
+  {{range .Rows}}<tr>
+    <td class="title"><a href="/e/{{.E.ID}}/retro">{{.E.Name}}</a><div class="muted small">{{statusBadge .E.Status}}{{if .E.Kind}} {{.E.Kind}}{{end}}</div></td>
+    <td class="nowrap">{{if .E.Start}}{{.Date}}{{else}}<span class="muted">offen</span>{{end}}</td>
+    <td class="num">{{if .GuestsActual}}{{.GuestsActual}}{{else}}{{.GuestsPlan}} <span class="muted small">Plan</span>{{end}}</td>
+    <td class="num">{{eur .Income}}</td><td class="num">{{eur .Expense}}</td>
+    <td class="num {{if neg .Profit}}bad{{else}}good{{end}}">{{eurSigned .Profit}}</td>
+    <td class="num">{{if .Income}}{{pct .Margin}}{{else}}–{{end}}</td>
+    <td class="num">{{if .HasGuests}}{{eur .IncomePG}}{{else}}–{{end}}</td><td class="num">{{if .HasGuests}}{{eur .CostPG}}{{else}}–{{end}}</td>
+    <td class="num {{if .HasGuests}}{{if neg .ProfitPG}}bad{{end}}{{end}}">{{if .HasGuests}}{{eurSigned .ProfitPG}}{{else}}–{{end}}</td>
+  </tr>{{end}}
+  {{if .AvgN}}<tr class="sum"><td colspan="6">Durchschnitt abgeschlossener Events ({{.AvgN}})</td><td class="num">{{pct .Avg.Margin}}</td><td class="num">{{eur .Avg.IncomePG}}</td><td class="num">{{eur .Avg.CostPG}}</td><td class="num">{{eurSigned .Avg.ProfitPG}}</td></tr>{{end}}
+  </tbody>
+</table></div>
+{{else}}<div class="tblwrap"><div class="empty">Keine Events mit Kalkulation und Budget, die du sehen darfst.</div></div>{{end}}
+
+{{if .Prices}}
+<div class="panel flat" style="margin-top:18px"><h2>Einkaufspreise im Vergleich</h2>
+  <table class="tbl compact"><thead><tr><th>Artikel</th><th>Gebinde</th><th class="num">Zuletzt (netto)</th><th class="num">Niedrigster</th><th class="num">Höchster</th><th class="num">Spanne</th><th class="num">Events</th></tr></thead><tbody>
+  {{range .Prices}}<tr><td class="title">{{.Name}}</td><td>{{.Pack}}</td><td class="num">{{eur .Latest}}<div class="muted small">{{.LatestEvent}}</div></td><td class="num">{{eur .Min}}</td><td class="num">{{eur .Max}}</td><td class="num {{if gt .Spread 10.0}}warn-t{{end}}">{{pct .Spread}}</td><td class="num">{{.Events}}</td></tr>{{end}}
+  </tbody></table>
+  <p class="muted small" style="margin:8px 14px 12px">Artikel, die in mindestens zwei Events mit gleichem Namen vorkommen, sortiert nach der größten Preisspanne. Preise netto je Gebinde, einmal bei Lieferanten nachverhandeln oder wechseln, wo die Spanne groß ist.</p>
+</div>
+{{end}}
+{{end}}

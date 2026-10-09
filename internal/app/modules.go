@@ -385,6 +385,8 @@ func init() {
 	insertBeforeNotes(modByKey["bar_products"], []Field{
 		F("vat", "USt-Satz", TSelect).Options(O("0", "0 %", "gray"), O("7", "7 %", "gray"), O("19", "19 %", "gray")).Blank("Standard des Events").Hint("Verkaufspreise gelten als Brutto-Preise (so steht es auf der Karte). 7 % z. B. für Speisen zum Mitnehmen."),
 	})
+	registerFeatureModules()
+	extendModules()
 	sort.SliceStable(modules, func(i, j int) bool { return modules[i].Order < modules[j].Order })
 }
 

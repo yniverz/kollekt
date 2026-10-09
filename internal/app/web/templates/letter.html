@@ -1,0 +1,19 @@
+{{define "content"}}
+<div class="page-head">
+  <div><h1>Anwohner-Brief</h1><p class="sub">Text für den Briefkasten oder Aushang. Passe ihn an und drucke ihn aus. Die Daten kommen aus dem Event.</p></div>
+  <div class="actions"><a class="btn" href="/e/{{.Event.ID}}/m/neighbors">Zur Liste</a><button class="btn primary" type="button" data-print>Drucken</button></div>
+</div>
+{{if .CanEdit}}
+<form method="post" action="/e/{{.Event.ID}}/neighbors/letter" class="panel noprint">
+  <input type="hidden" name="_csrf" value="{{.CSRF}}">
+  <div class="form-grid">
+    <div class="field"><label class="lbl" for="lc">Ansprechperson</label><input id="lc" name="contact" value="{{.S.Contact}}" maxlength="120"></div>
+    <div class="field"><label class="lbl" for="lp">Telefon während der Veranstaltung</label><input id="lp" name="phone" value="{{.S.Phone}}" maxlength="60"></div>
+    <div class="field"><label class="lbl" for="lu">Musik endet spätestens um</label><input id="lu" name="until" value="{{.S.Until}}" placeholder="z. B. 22:00" maxlength="10"><div class="help">Leer lassen, wenn keine Zeit genannt werden soll. Muss mit der Genehmigung übereinstimmen.</div></div>
+  </div>
+  <div class="field"><label class="lbl" for="lb">Brieftext</label><textarea id="lb" name="body" rows="14">{{.S.Body}}</textarea></div>
+  <div class="actions"><button class="btn primary">Speichern</button><button class="btn" name="regenerate" value="1" data-confirm="Der Text wird aus den aktuellen Angaben neu erzeugt und überschreibt deine Änderungen. Fortfahren?">Text neu erzeugen</button></div>
+</form>
+{{end}}
+<div class="panel print-letter" style="max-width:720px"><div style="white-space:pre-wrap;line-height:1.6">{{.S.Body}}</div></div>
+{{end}}

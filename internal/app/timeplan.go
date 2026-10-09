@@ -295,7 +295,7 @@ func (c *C) calBase() string {
 
 // migrateModules switches newly introduced default modules on for events created before them.
 func (a *App) migrateModules() {
-	for _, mod := range []string{"timeplan", "sitemap"} {
+	for _, mod := range []string{"timeplan", "sitemap", "power", "checklists", "logistics", "neighbors", "retro"} {
 		for _, e := range a.allEvents() {
 			flag := "mig_" + mod
 			var done bool

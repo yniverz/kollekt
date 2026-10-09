@@ -51,6 +51,7 @@
     {{end}}
   </div>
   <div class="stack">
+    {{if .Weather}}<div class="panel" id="weather" data-url="/e/{{.Event.ID}}/weather"><h2>Wetter</h2><div id="weather-body" class="small muted">Wird geladen …</div></div>{{end}}
     {{if $v.Pin}}<div class="panel"><h2>Ort</h2><div class="kmap" data-points="{{$v.Pin.JSON}}" data-height="{{$v.Pin.Height}}" style="margin-bottom:0"></div></div>{{end}}
     <div class="panel">
       <h2>Team</h2>

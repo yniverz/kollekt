@@ -276,6 +276,11 @@ func (c *C) finance(G int) *Finance {
 			add("equipment", r.S("item"), "Material", r.I("area"), c.amt(r.N("cost"), r, false), r.B("paid"), r.ID)
 		}
 	}
+	if e.Has("logistics") {
+		for _, r := range c.Recs("logistics") {
+			add("logistics", r.S("title"), "Transport", 0, c.fahrtCost(r), r.B("paid"), r.ID)
+		}
+	}
 	if e.Has("permits") {
 		for _, r := range c.Recs("permits") {
 			if r.S("status") == "na" || r.S("status") == "denied" {
@@ -620,6 +625,8 @@ func srcLabel(s string) string {
 		return "Genehmigungen"
 	case "location":
 		return "Location"
+	case "logistics":
+		return "Transport"
 	case "bar":
 		return "Bar & Verkauf"
 	case "tickets":

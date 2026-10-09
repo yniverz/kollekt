@@ -1,0 +1,59 @@
+{{define "content"}}
+<div class="page-head">
+  <div><h1>Nachbereitung</h1><p class="sub">Was war geplant, was ist passiert und was machen wir beim nächsten Mal anders? {{if .ShowMoney}}<span class="badge b-gray">{{.Basis}}</span>{{end}}</p></div>
+  <div class="actions"><a class="btn" href="/compare">Alle Events vergleichen</a></div>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="l">Gäste</div><div class="v">{{if .GuestsActual}}{{.GuestsActual}}{{else}}{{.GuestsPlan}}{{end}}</div><div class="s">{{if .GuestsActual}}Plan war {{.GuestsPlan}}{{else}}noch keine Ist-Zahl, trage sie in der Kalkulation ein{{end}}</div></div>
+  {{if .ShowMoney}}{{with .Fin}}<div class="kpi {{if neg .ProfitFore}}bad{{else}}good{{end}}"><div class="l">Ergebnis (Prognose / Ist)</div><div class="v">{{eurSigned .ProfitFore}}</div><div class="s">Plan: {{eurSigned .Profit}}</div></div>{{end}}
+  {{if .PerGuest}}<div class="kpi"><div class="l">Ergebnis pro Gast</div><div class="v">{{eurSigned .PerGuest}}</div><div class="s">&nbsp;</div></div>{{end}}{{end}}
+  {{if .TasksTotal}}<div class="kpi"><div class="l">Aufgaben erledigt</div><div class="v">{{.TasksDone}} / {{.TasksTotal}}</div><div class="s">&nbsp;</div></div>{{end}}
+</div>
+
+{{if .ShowMoney}}
+<div class="grid2" style="margin-bottom:18px">
+  <div class="panel flat"><h2>Plan gegen Ist</h2>
+    <table class="tbl compact"><thead><tr><th></th><th class="num">Plan</th><th class="num">Prognose / Ist</th><th class="num">Abweichung</th></tr></thead><tbody>
+    {{range .Rows}}<tr><td><b>{{.Label}}</b></td><td class="num">{{eur .Plan}}</td><td class="num">{{eur .Fore}}</td><td class="num {{if .Bad}}bad{{else if .Diff}}good{{end}}">{{eurSigned .Diff}}</td></tr>{{end}}
+    </tbody></table>
+    <p class="muted small" style="margin:8px 14px 12px">Ist-Beträge, tatsächliche Gäste und Eintritt trägst du in Budget und Kalkulation ein. Ohne Ist-Wert gilt der Planwert.</p>
+  </div>
+  <div class="panel flat"><h2>Größte Abweichungen bei den Ausgaben</h2>
+    <table class="tbl compact"><thead><tr><th>Kategorie</th><th class="num">Plan</th><th class="num">Ist</th><th class="num">Abw.</th></tr></thead><tbody>
+    {{range .Cats}}<tr><td>{{.Name}}</td><td class="num">{{eur .Plan}}</td><td class="num">{{eur .Fore}}</td><td class="num {{if gt .Diff 0.0}}bad{{else}}good{{end}}">{{eurSigned .Diff}}</td></tr>{{else}}<tr><td colspan="4" class="muted">Keine Abweichungen erfasst.</td></tr>{{end}}
+    </tbody></table>
+  </div>
+</div>
+{{end}}
+
+{{if .BarRows}}
+<div class="panel flat" style="margin-bottom:18px"><h2>Verkauf: Plan gegen Ist</h2>
+  <table class="tbl compact"><thead><tr><th>Artikel</th><th class="num">Plan-Menge</th><th class="num">Verkauft</th><th class="num">Abweichung</th><th class="num">Umsatz Plan</th><th class="num">Umsatz Ist</th></tr></thead><tbody>
+  {{range .BarRows}}<tr><td>{{.Name}}</td><td class="num">{{num .Plan}}</td><td class="num">{{num .Sold}}</td><td class="num {{if lt .Diff 0.0}}bad{{else}}good{{end}}">{{num .Diff}}</td><td class="num">{{eur .RevPlan}}</td><td class="num">{{eur .RevIs}}</td></tr>{{end}}
+  </tbody></table>
+</div>
+{{end}}
+
+<form method="post" action="/e/{{.Event.ID}}/retro" class="panel">
+  <input type="hidden" name="_csrf" value="{{.CSRF}}">
+  <h2>Was haben wir gelernt?</h2>
+  <div class="field" style="max-width:240px"><label class="lbl" for="rt">Gesamteindruck</label>
+    <select id="rt" name="rating" {{if not .CanEdit}}disabled{{end}}><option value="0">–</option>{{range .Ratings}}<option value="{{.}}" {{if eq . $.Notes.Rating}}selected{{end}}>{{.}} von 5</option>{{end}}</select></div>
+  <div class="field"><label class="lbl" for="well">Das lief gut</label><textarea id="well" name="well" rows="4" {{if not .CanEdit}}readonly{{end}}>{{.Notes.Well}}</textarea></div>
+  <div class="field"><label class="lbl" for="imp">Das lief nicht gut</label><textarea id="imp" name="improve" rows="4" {{if not .CanEdit}}readonly{{end}}>{{.Notes.Improve}}</textarea></div>
+  <div class="field"><label class="lbl" for="nxt">Beim nächsten Mal anders</label><textarea id="nxt" name="next" rows="4" {{if not .CanEdit}}readonly{{end}}>{{.Notes.Next}}</textarea><div class="help">Diese Punkte zeigt Kollekt bei künftigen Events als Erinnerung an.</div></div>
+  {{if .CanEdit}}<button class="btn primary">Speichern</button>{{end}}
+</form>
+
+{{if .Old}}
+<div class="panel"><h2>Aus früheren Events</h2>
+  {{range .Old}}
+  <div style="margin-bottom:14px"><b><a href="{{.URL}}">{{.Event}}</a></b> <span class="muted small">{{.Date}}{{if .SameKind}} · gleiche Art{{end}}{{if .Notes.Rating}} · {{.Notes.Rating}}/5{{end}}</span>
+    {{if .Notes.Improve}}<div class="small"><b>Verbessern:</b> {{nl2br .Notes.Improve}}</div>{{end}}
+    {{if .Notes.Next}}<div class="small"><b>Nächstes Mal:</b> {{nl2br .Notes.Next}}</div>{{end}}
+  </div>
+  {{end}}
+</div>
+{{end}}
+{{end}}

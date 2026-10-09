@@ -1,6 +1,7 @@
 (function () {
   'use strict';
   var drawer = document.getElementById('drawer');
+  var KV = (document.querySelector('meta[name="kver"]') || {}).content || '';
   var csrf = (document.querySelector('meta[name="csrf"]') || {}).content || '';
 
   function openDrawer(url) {
@@ -127,6 +128,28 @@
   }
   initWidgets(document);
 
+  // weather panel on the event overview (server-side proxy, cached)
+  (function () {
+    var box = document.getElementById('weather');
+    if (!box) return;
+    var body = document.getElementById('weather-body');
+    function node(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+    fetch(box.getAttribute('data-url'), { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (w) {
+      body.textContent = '';
+      if (!w.days || !w.days.length) { body.textContent = w.note || 'Keine Wetterdaten.'; return; }
+      w.days.forEach(function (d) {
+        var row = node('div'); row.style.marginBottom = '10px';
+        var t = node('div'); t.appendChild(node('b', null, d.label + ': ')); t.appendChild(document.createTextNode(d.desc + ', ' + d.tmin + ' bis ' + d.tmax + ' °C'));
+        row.appendChild(t);
+        var s = 'Regen ' + String(d.rain).replace('.', ',') + ' mm' + (w.mode === 'history' ? '' : ' (' + d.rainPct + ' %)') + ' · Böen bis ' + d.gust + ' km/h';
+        row.appendChild(node('div', 'muted', s));
+        (d.warn || []).forEach(function (m) { row.appendChild(node('div', 'warn-t', '⚠ ' + m)); });
+        body.appendChild(row);
+      });
+      body.appendChild(node('div', 'muted small', w.note + ' Quelle: ' + w.source + '.'));
+    }).catch(function () { body.textContent = 'Wetterdaten sind gerade nicht erreichbar.'; });
+  })();
+
   // maps are loaded on demand so pages without maps stay light
   var leafletReady = null;
   function loadScript(src) {
@@ -136,8 +159,8 @@
   }
   function loadLeaflet() {
     if (leafletReady) return leafletReady;
-    var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/static/vendor/leaflet/leaflet.css?v=1'; document.head.appendChild(l);
-    leafletReady = loadScript('/static/vendor/leaflet/leaflet.js?v=1').then(function () { return loadScript('/static/maps.js?v=2'); });
+    var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/static/vendor/leaflet/leaflet.css?v=' + KV; document.head.appendChild(l);
+    leafletReady = loadScript('/static/vendor/leaflet/leaflet.js?v=' + KV).then(function () { return loadScript('/static/maps.js?v=' + KV); });
     return leafletReady;
   }
   function initMaps(scope) {
@@ -145,7 +168,7 @@
     if (!scope.querySelector('.kmap:not([data-ready]), .kgeo:not([data-ready])') && !wantsSite) return;
     loadLeaflet().then(function () {
       window.KMaps.init(scope);
-      if (wantsSite && !window.KSite) loadScript('/static/siteplan.js?v=2');
+      if (wantsSite && !window.KSite) loadScript('/static/siteplan.js?v=' + KV);
     });
   }
   initMaps(document);

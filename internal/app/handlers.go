@@ -65,6 +65,14 @@ func (a *App) routes() {
 	mux.HandleFunc("POST /e/{eid}/lageplan/{pid}/view", a.evt(func(c *C) { c.handleSiteView(c.W, c.R) }))
 	mux.HandleFunc("POST /e/{eid}/lageplan/items/{iid}/delete", a.evt(func(c *C) { c.handleSiteItemDelete(c.W, c.R) }))
 
+	mux.HandleFunc("GET /e/{eid}/weather", a.evt(func(c *C) { c.handleWeather(c.W, c.R) }))
+	mux.HandleFunc("POST /e/{eid}/m/checklists/reset", a.evt(func(c *C) { c.handleChecklistReset(c.W, c.R) }))
+	mux.HandleFunc("GET /e/{eid}/retro", a.evt(func(c *C) { c.handleRetro(c.W, c.R) }))
+	mux.HandleFunc("POST /e/{eid}/retro", a.evt(func(c *C) { c.handleRetroSave(c.W, c.R) }))
+	mux.HandleFunc("GET /e/{eid}/neighbors/letter", a.evt(func(c *C) { c.handleLetter(c.W, c.R) }))
+	mux.HandleFunc("POST /e/{eid}/neighbors/letter", a.evt(func(c *C) { c.handleLetterSave(c.W, c.R) }))
+	mux.HandleFunc("GET /compare", a.auth(func(c *C) { c.handleCompare(c.W, c.R) }))
+
 	// custom pages
 	mux.HandleFunc("GET /e/{eid}/calc", a.evt(func(c *C) { c.handleCalc(c.W, c.R) }))
 	mux.HandleFunc("POST /e/{eid}/calc", a.evt(func(c *C) { c.handleCalcSave(c.W, c.R) }))

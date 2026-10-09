@@ -90,6 +90,7 @@ type Action struct {
 
 type Module struct {
 	Key, Name, Singular, Icon, Desc string
+	NavGroup                        string // navigation section
 	Global                          bool   // records with event_id = 0
 	Core                            bool   // cannot be disabled in an event
 	Default                         bool   // enabled for blank events

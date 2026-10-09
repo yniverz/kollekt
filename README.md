@@ -24,6 +24,13 @@ Kollekt ist **kein Ticketsystem und keine Kasse**. Es dient der Planung und dem 
 | **Material** | Bedarf, Beschaffung (eigen/geliehen/gemietet), Status, Kosten |
 | **Lageplan** | Wo steht was? Eigenen Plan (PNG/JPG/WebP) hochladen oder direkt auf einer OpenStreetMap-Karte planen. Punkte, Flächen, Rechtecke und Linien für Bühne, Bar, Einlass, Toiletten, Fluchtwege und Zäune, farbig nach Bereich, mit Flächen- und Längenberechnung. Jede Leitung zeichnet nur in ihrem Bereich, alle anderen sehen mit |
 | **Karten & Pins** | Locations und Kontakte haben eine Position auf der Karte (Adresssuche oder Klick). Übersichtskarte aller Locations, Karte der Location-Anfragen und der Ort des Events in der Übersicht |
+| **Strom** | Einspeisung → Verteiler → Verbraucher als Baum. Last je Verteiler mit Gleichzeitigkeit, Stromstärke und Auslastung gegen Absicherung bzw. Aggregat, Warnung bei Überlast, benötigte Einspeisung mit 20 % Reserve. Grobe Planungshilfe, die Auslegung macht eine Elektrofachkraft |
+| **Checklisten** | Abnahme „Vor Einlass“, Aufbau, Abbau, Packlisten. Abhaken, pro Liste zurücksetzen, als Vorlage wiederverwendbar |
+| **Transport** | Abholungen, Lieferungen, Team-Anfahrt. Strecke aus den Pins (Luftlinie × 1,3) oder manuell, Fahrtkosten fließen ins Budget, freie Plätze für Fahrgemeinschaften |
+| **Nachbarschaft** | Wer wurde informiert, wer hat sich gemeldet? Anwohner-Brief mit Eventdaten zum Ausdrucken |
+| **Nachbereitung** | Plan gegen Ist (Gäste, Einnahmen, Ausgaben, Bar), größte Abweichungen, Erkenntnisse mit Bewertung. Diese erscheinen bei künftigen Events als Erinnerung |
+| **Event-Vergleich** | Alle Events nebeneinander (Gäste, Ergebnis, Marge, Werte pro Gast) und Einkaufspreise gleicher Artikel über Events hinweg |
+| **Wetter** | In der Event-Übersicht: Vorhersage (bis 16 Tage vorher), sonst typisches Wetter der letzten 5 Jahre, mit Hinweisen zu Regen, Wind (Bühne/Zelte), Hitze und Kälte |
 | **Anhänge** | An fast jedem Eintrag (Rechnung, Vertrag, Bescheid, Plan …): bis 25 MB pro Datei, höchstens 20 pro Eintrag, Büroklammer-Hinweis in der Liste |
 | **Stammdaten** | Kontakte, Locations und Artikelstamm gelten für alle Events: Events werden aus diesen Bausteinen zusammengeklickt |
 
@@ -56,6 +63,7 @@ Danach `http://localhost:8080` öffnen. Beim ersten Aufruf erscheint die Einrich
 | `KOLLEKT_ADMIN_USER` / `KOLLEKT_ADMIN_PASSWORD` | leer | Admin-Konto beim ersten Start anlegen (Passwort 10 bis 72 Zeichen) |
 | `KOLLEKT_TRUST_PROXY` | leer | `1` übernimmt die Client-IP aus `X-Forwarded-For` (nur hinter eigenem Proxy, sonst fälschbar) |
 | `KOLLEKT_SOURCE_URL` | GitHub-Repo | Ziel des „Quellcode“-Links in der Fußzeile. Wer eine geänderte Version betreibt, muss hier auf den eigenen Quellcode verweisen (AGPL § 13) |
+| `KOLLEKT_WEATHER` | an | `off` schaltet die Wetterdaten ab. Der Server fragt dann Open-Meteo nicht mehr ab |
 | `KOLLEKT_MAPS` | an | `off` schaltet alle Funktionen mit externen Kartendiensten ab (Pins, Kartenpläne, Adresssuche). Bildpläne funktionieren weiter |
 | `KOLLEKT_TILE_URL` | OpenStreetMap | Kachelserver, z. B. ein eigener oder ein Anbieter mit Vertrag. Platzhalter `{z}/{x}/{y}` und optional `{s}` |
 | `KOLLEKT_TILE_ATTRIBUTION` | © OpenStreetMap-Mitwirkende | Quellenangabe, die im Kartenrand erscheint. Bei einem anderen Anbieter anpassen |
@@ -109,7 +117,7 @@ Siehe [SECURITY.md](SECURITY.md). Kurz: keine Zugangsdaten im Repository, Passw�
 
 ## Karten und Datenschutz
 
-Kartenkacheln und Adresssuche kommen standardmäßig von den öffentlichen OpenStreetMap-Servern (Kacheln: `tile.openstreetmap.org`, Suche: `nominatim.openstreetmap.org`). Dabei sieht OpenStreetMap die IP-Adresse und Anfragen der Nutzenden. Die öffentlichen Server sind für gelegentliche, kleine Nutzung gedacht (siehe deren Nutzungsrichtlinien). Für größere Installationen eigene Dienste über die Variablen oben eintragen. Mit `KOLLEKT_MAPS=off` gibt es keinerlei Verbindungen zu Kartendiensten. Bildpläne im Lageplan brauchen nie einen externen Dienst. Die Content-Security-Policy erlaubt nur die konfigurierten Hosts.
+Kartenkacheln und Adresssuche kommen standardmäßig von den öffentlichen OpenStreetMap-Servern (Kacheln: `tile.openstreetmap.org`, Suche: `nominatim.openstreetmap.org`). Dabei sieht OpenStreetMap die IP-Adresse und Anfragen der Nutzenden. Die öffentlichen Server sind für gelegentliche, kleine Nutzung gedacht (siehe deren Nutzungsrichtlinien). Für größere Installationen eigene Dienste über die Variablen oben eintragen. Mit `KOLLEKT_MAPS=off` gibt es keinerlei Verbindungen zu Kartendiensten. Die Wetterdaten ruft der Server (nicht der Browser) bei [Open-Meteo](https://open-meteo.com) ab und überträgt dabei nur die Koordinaten der Location und die Eventtage. Mit `KOLLEKT_WEATHER=off` ist das aus. Bildpläne im Lageplan brauchen nie einen externen Dienst. Die Content-Security-Policy erlaubt dem Browser nur die konfigurierten Kartenhosts.
 
 Mitgeliefert: [Leaflet](https://leafletjs.com) 1.9.4 (BSD-2-Clause, Lizenztext unter `internal/app/web/static/vendor/leaflet/LICENSE`).
 

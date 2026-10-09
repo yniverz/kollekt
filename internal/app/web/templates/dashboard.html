@@ -1,7 +1,7 @@
 {{define "content"}}
 <div class="page-head">
   <div><h1>Events</h1><p class="sub">Alles, was ansteht, und alles, was war.</p></div>
-  <div class="actions">{{if .CanCreate}}<a class="btn primary" href="/events/new">{{icon "plus"}} Neues Event</a>{{end}}</div>
+  <div class="actions"><a class="btn" href="/compare">Vergleich</a>{{if .CanCreate}}<a class="btn primary" href="/events/new">{{icon "plus"}} Neues Event</a>{{end}}</div>
 </div>
 
 {{if .Mine}}

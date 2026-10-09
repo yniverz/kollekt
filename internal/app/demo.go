@@ -46,7 +46,11 @@ func (a *App) seedDemo() {
 	kessel := contact("DJ Kessel (fiktiv)", "person", "DJ", "+49 000 0000004")
 	lund := contact("Lund (fiktiv)", "person", "DJ", "")
 	pia := contact("Pia B. (fiktiv)", "person", "DJ", "")
-	_ = contact("Getränkehandel Demo (fiktiv)", "company", "Lieferant", "+49 000 0000005")
+	haendler := contact("Getränkehandel Demo (fiktiv)", "company", "Lieferant", "+49 000 0000005")
+	if r := a.rec(haendler); r != nil {
+		r.D["geo"] = "49.031000,8.355000"
+		_ = a.saveRec(r)
+	}
 	amt := contact("Ordnungsamt Beispielstadt (fiktiv)", "authority", "Behörde", "")
 	hall := loc(map[string]string{"name": "Lagerhalle Süd (fiktiv)", "kind": "indoor", "city": "Beispielstadt", "capacity": "250", "rent": "1200", "owner": itoa(vermieter), "geo": "49.014200,8.389500", "curfew": "Open End bis 6 Uhr"})
 	field := loc(map[string]string{"name": "Waldlichtung Beispielhain (fiktiv)", "kind": "outdoor", "city": "Beispielhain", "capacity": "400", "rent": "1800", "geo": "49.021500,8.412300", "curfew": "Musik bis 3 Uhr", "notes": "Strom und Wasser nicht vorhanden. Zufahrt über Feldweg."})
@@ -145,16 +149,33 @@ func (a *App) seedDemo() {
 		return fmt.Sprintf(`{"t":"poly","p":[[%f,%f],[%f,%f],[%f,%f],[%f,%f]]}`, lat, lng, lat, lng+dlng, lat+dlat, lng+dlng, lat+dlat, lng)
 	}
 	pt := func(lat, lng float64) string { return fmt.Sprintf(`{"t":"point","p":[[%f,%f]]}`, lat, lng) }
-	item := func(title, kind, ar, geom string) {
-		add("site_items", map[string]string{"plan": itoa(plan.ID), "title": title, "kind": kind, "area": itoa(area[ar]), "geom": geom})
+	item := func(title, kind, ar, geom string) int64 {
+		return add("site_items", map[string]string{"plan": itoa(plan.ID), "title": title, "kind": kind, "area": itoa(area[ar]), "geom": geom}).ID
 	}
 	item("Main Floor", "dance", "Technik & Sound", poly(49.02145, 8.41215, 0.00025, 0.00040))
-	item("Bühne", "stage", "Technik & Sound", poly(49.02170, 8.41225, 0.00010, 0.00020))
-	item("Bar", "bar", "Bar", poly(49.02145, 8.41262, 0.00012, 0.00018))
+	stageID := item("Bühne", "stage", "Technik & Sound", poly(49.02170, 8.41225, 0.00010, 0.00020))
+	barID := item("Bar", "bar", "Bar", poly(49.02145, 8.41262, 0.00012, 0.00018))
 	item("Einlass", "entry", "Einlass & Kasse", pt(49.02130, 8.41200))
 	item("Toiletten", "wc", "Aufbau & Deko", pt(49.02175, 8.41275))
 	item("Notausgang Ost", "safety", "Security & Sanitäts", pt(49.02160, 8.41290))
-	add("site_items", map[string]string{"plan": itoa(plan.ID), "title": "Fluchtweg Ost", "kind": "route", "geom": `{"t":"line","p":[[49.02158,8.41255],[49.02160,8.41275],[49.02162,8.41292]]}`})
+	add("site_items", map[string]string{"plan": itoa(plan.ID), "title": "Fluchtweg Ost", "kind": "route", "width_m": "3", "geom": `{"t":"line","p":[[49.02158,8.41255],[49.02160,8.41275],[49.02162,8.41292]]}`})
+	// material placed on the plan with a set-up order
+	for i, g := range a.recs(e.ID, "equipment") {
+		g.D["order"] = itoa(int64(i + 1))
+		switch g.S("item") {
+		case "Soundsystem inkl. Techniker":
+			g.D["place"] = itoa(stageID)
+		case "Theken, Kühlung und Zapfanlage":
+			g.D["place"] = itoa(barID)
+		}
+		_ = a.saveRec(g)
+	}
+	// transport, neighbours
+	add("logistics", map[string]string{"title": "Getränke abholen", "kind": "pickup", "place": itoa(haendler), "trips": "2", "roundtrip": "1", "rate": "0.35", "driver": itoa(mara), "date": st.AddDate(0, 0, -1).Format("2006-01-02")})
+	add("logistics", map[string]string{"title": "Team-Anfahrt zum Aufbau", "kind": "team", "km": "15", "trips": "1", "roundtrip": "1", "rate": "0.30", "seats": "3", "driver": itoa(jonas), "date": st.Format("2006-01-02")})
+	for _, n := range [][3]string{{"Waldweg 1–7 (fiktiv)", "informed", "resident"}, {"Reiterhof Beispiel (fiktiv)", "complaint", "business"}, {"Ortsvorsteherin (fiktiv)", "ok", "official"}, {"Hofstraße 2–12 (fiktiv)", "todo", "resident"}} {
+		add("neighbors", map[string]string{"who": n[0], "status": n[1], "kind": n[2], "notes": ""})
+	}
 	for _, rl := range a.roles() {
 		if rl.Name == "Orga-Leitung" {
 			a.setMember(e.ID, admin.ID, rl.ID, nil)

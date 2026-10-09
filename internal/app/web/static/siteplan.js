@@ -36,6 +36,13 @@
     var s = D.plan.widthM / W;
     return pts.map(function (p) { return [p[0] * W * s, p[1] * H * s]; });
   }
+  function areaM2(g) {
+    if (!g || g.t !== 'poly') return null;
+    var m = metersXY(g.p); if (!m) return null;
+    var a = 0, i;
+    for (i = 0; i < m.length; i++) { var j = (i + 1) % m.length; a += m[i][0] * m[j][1] - m[j][0] * m[i][1]; }
+    return Math.abs(a) / 2;
+  }
   function measure(g) {
     if (!g || g.t === 'point') return '';
     var m = metersXY(g.p);
@@ -152,19 +159,26 @@
     D.areas.forEach(function (a) { if (a.editable || a.id === it.area) option(area, a.id, a.name, it.area); });
     area.disabled = ro; field('Bereich', area);
     var notes = el('textarea'); notes.value = it.notes; notes.disabled = ro; notes.rows = 3; field('Notizen', notes);
+    var width = null;
+    if (it.kind === 'route' || it.kind === 'safety') {
+      width = el('input'); width.type = 'number'; width.step = 'any'; width.min = '0'; width.max = '200'; width.value = it.width || ''; width.disabled = ro; width.placeholder = 'z. B. 3';
+      field('Nutzbare Breite (m)', width);
+    }
     var m = measure(it.geom); if (m) form.appendChild(el('p', 'small muted', m));
+    if (it.gear && it.gear.length) form.appendChild(el('p', 'small', 'Material hier: ' + it.gear.join(', ')));
     if (ro) { form.appendChild(el('p', 'small muted', 'Dieses Objekt gehört zu einem anderen Bereich und ist für dich nur lesbar.')); return; }
     var row = el('div', 'actions');
     var ok = el('button', 'btn primary sm', 'Speichern'); ok.type = 'button';
     var del = el('button', 'btn danger sm', 'Löschen'); del.type = 'button';
     ok.onclick = function () {
       it.title = title.value; it.kind = kind.value; it.area = parseInt(area.value, 10) || 0; it.notes = notes.value;
+      it.width = width ? (parseFloat(String(width.value).replace(',', '.')) || 0) : (it.width || 0);
       save(it, false).then(function () { say('Gespeichert.'); });
     };
     del.onclick = function () {
       if (!confirm('„' + it.title + '“ wirklich löschen?')) return;
       api('POST', API.replace(/\/\d+$/, '') + '/items/' + it.id + '/delete').then(function () {
-        removeLayer(it.id); clearHandles(); D.items = D.items.filter(function (x) { return x.id !== it.id; }); selected = null; renderForm(); renderList(); say('Gelöscht.');
+        removeLayer(it.id); clearHandles(); D.items = D.items.filter(function (x) { return x.id !== it.id; }); selected = null; renderForm(); renderList(); renderCheck(); say('Gelöscht.');
       }).catch(function (e) { say(e.message, true); });
     };
     row.append(ok, del); form.appendChild(row);
@@ -202,13 +216,41 @@
     });
   }
 
+  // ---- density & escape routes (orientation only) ----
+  function renderCheck() {
+    var box = document.getElementById('sp-check'); if (!box) return;
+    box.textContent = '';
+    box.appendChild(el('h2', null, 'Dichte und Fluchtwege'));
+    var visitors = 0, known = true, routes = 0, routeN = 0, noWidth = 0;
+    D.items.forEach(function (it) {
+      if (it.kind === 'dance' || it.kind === 'camp') { var a = areaM2(it.geom); if (a == null) known = false; else visitors += a; }
+      if (it.kind === 'route') { routeN++; if (it.width > 0) routes += it.width; else noWidth++; }
+    });
+    var p = D.plan, g = p.guests, rows = [];
+    function line(text, cls) { rows.push(el('p', 'small ' + (cls || ''), text)); }
+    if (!known) line('Für Flächen fehlt der Maßstab: trage in den Plan-Einstellungen die Breite des Plans in Metern ein.', 'muted');
+    else if (!visitors) line('Zeichne Tanzfläche oder Chillout-Bereiche ein (Art „Tanzfläche / Publikum“ oder „Chillout / Rückzug“), dann wird die Besucherfläche gerechnet.', 'muted');
+    else {
+      var maxP = Math.floor(visitors * p.density);
+      line('Besucherfläche ≈ ' + Math.round(visitors).toLocaleString('de-DE') + ' m² · bei ' + String(p.density).replace('.', ',') + ' Personen/m² rechnerisch ' + maxP.toLocaleString('de-DE') + ' Personen.');
+      if (g) line('Geplante Gäste (Kalkulation): ' + g.toLocaleString('de-DE') + (g > maxP ? ' → mehr als die Fläche hergibt.' : ' → passt rechnerisch.'), g > maxP ? 'bad' : 'good');
+      if (p.capacity && g > p.capacity) line('Geplante Gäste liegen über der Kapazität der Location (' + p.capacity.toLocaleString('de-DE') + ').', 'bad');
+    }
+    if (g && routeN) {
+      var need = g / 100 * p.escapeW;
+      line('Fluchtwege: ' + String(Math.round(routes * 10) / 10).replace('.', ',') + ' m nutzbare Breite eingezeichnet, bei ' + g.toLocaleString('de-DE') + ' Gästen rechnerisch ≈ ' + String(Math.round(need * 10) / 10).replace('.', ',') + ' m nötig.' + (noWidth ? ' ' + noWidth + ' Fluchtweg(e) ohne Breite.' : ''), (routes < need) ? 'bad' : 'good');
+    } else if (g && !routeN) line('Noch kein Fluchtweg eingezeichnet (Art „Fluchtweg / Weg“, mit nutzbarer Breite).', 'warn-t');
+    line('Orientierung ohne Rechtswirkung. Maßgeblich sind Bescheid und Vorgaben von Bauordnungsbehörde, Feuerwehr und Ordnungsamt.', 'muted');
+    rows.forEach(function (r) { box.appendChild(r); });
+  }
+
   // ---- saving ----
   function save(it, geomOnly) {
-    return api('POST', API + '/items', { id: it.id || 0, title: it.title, kind: it.kind, area: it.area || 0, geom: it.geom, notes: it.notes || '' })
+    return api('POST', API + '/items', { id: it.id || 0, title: it.title, kind: it.kind, area: it.area || 0, geom: it.geom, notes: it.notes || '', width: it.width || 0 })
       .then(function (r) {
         var cur = itemById(it.id);
         if (cur) { Object.assign(cur, r); } else { D.items.push(r); }
-        drawItem(cur || r); renderList(); renderLegend();
+        drawItem(cur || r); renderList(); renderLegend(); renderCheck();
         if (!geomOnly) select(r.id); else { var s = itemById(r.id); if (s && layers[r.id] && layers[r.id].setStyle && r.id === selected) layers[r.id].setStyle(styleFor(s, true)); renderForm(); }
         return r;
       })
@@ -286,6 +328,10 @@
     }
   }
   function go() {
+    map.scrollWheelZoom.disable(); // do not hijack page scrolling; click into the map to zoom with the wheel
+    var mEl = map.getContainer();
+    mEl.addEventListener('click', function () { map.scrollWheelZoom.enable(); });
+    mEl.addEventListener('mouseleave', function () { map.scrollWheelZoom.disable(); });
     D.items.forEach(function (it) { if (typeof it.geom === 'string') it.geom = JSON.parse(it.geom); });
     D.items.forEach(drawItem);
     map.on('click', onMapClick); map.on('mousemove', onMove); map.on('dblclick', function () { if (draft && (tool === 'poly' || tool === 'line')) finishDraft(); });
@@ -308,7 +354,7 @@
       api('POST', API + '/view', { lat: c.lat, lng: c.lng, zoom: map.getZoom() }).then(function () { say('Ausschnitt als Standard gespeichert.'); }).catch(function (e) { say(e.message, true); });
     };
     var pr = document.getElementById('sp-print'); if (pr) pr.onclick = function () { window.print(); };
-    setTool('select'); renderLegend(); renderList(); renderForm();
+    setTool('select'); renderLegend(); renderList(); renderForm(); renderCheck();
     setTimeout(function () { map.invalidateSize(); }, 100);
   }
   api('GET', API + '/data').then(start).catch(function (e) { document.getElementById('sp-map').textContent = e.message; });

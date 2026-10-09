@@ -117,3 +117,74 @@
 {{define "x_map"}}{{$m := .Extra}}{{if $m}}{{if $m.Points}}
 <div class="kmap" data-points="{{$m.JSON}}" data-height="{{$m.Height}}"></div>
 {{else if $m.Hint}}<p class="muted small" style="margin:-4px 0 14px">{{$m.Hint}}</p>{{end}}{{end}}{{end}}
+
+{{define "x_power"}}{{$p := .Extra}}
+{{if $p.Rows}}
+<div class="kpis">
+  <div class="kpi"><div class="l">Gesamtlast</div><div class="v">{{num (div1000 $p.Total)}} kW</div><div class="s">alle Verbraucher, mit Gleichzeitigkeit</div></div>
+  <div class="kpi"><div class="l">Benötigte Einspeisung</div><div class="v">{{num (div1000 $p.Needed)}} kW</div><div class="s">inkl. 20 % Reserve, ≈ {{num $p.KVA}} kVA</div></div>
+</div>
+{{range $p.Warns}}<div class="errbox">{{.}}</div>{{end}}
+<div class="tblwrap"><table class="tbl">
+  <thead><tr><th>Bezeichnung</th><th>Art</th><th class="num">Leistung</th><th class="num">Last</th><th class="num">Strom</th><th style="width:22%">Auslastung</th><th></th></tr></thead>
+  <tbody>
+  {{range $p.Rows}}
+  <tr class="row" {{if $p.CanEdit}}data-href="{{$p.Base}}/{{.R.ID}}?next={{$p.Next}}"{{end}}>
+    <td class="title" style="padding-left:{{add .Pad 12}}px">{{if $p.CanEdit}}<a data-modal href="{{$p.Base}}/{{.R.ID}}?next={{urlq $p.Next}}">{{.R.S "name"}}</a>{{else}}{{.R.S "name"}}{{end}}{{if .Site}} <span class="muted small">· {{icon "pin"}} {{.Site}}</span>{{end}}</td>
+    <td>{{if eq .Kind "source"}}{{badge .KindLabel "orange"}}{{else if eq .Kind "dist"}}{{badge .KindLabel "blue"}}{{else}}<span class="muted">{{.KindLabel}}</span>{{end}}</td>
+    <td class="num">{{if eq .Kind "load"}}{{if .R.S "watts"}}{{num (.R.N "watts")}} W{{if gt (.R.N "qty") 1.0}} × {{num (.R.N "qty")}}{{end}}{{else}}–{{end}}{{else if .Cap}}{{num (div1000 .Cap)}} kW{{else}}–{{end}}</td>
+    <td class="num">{{if .Load}}{{num (div1000 .Load)}} kW{{else}}–{{end}}</td>
+    <td class="num">{{if .Amps}}{{num .Amps}} A{{if .R.S "fuse"}} <span class="muted">/ {{.R.S "fuse"}} A</span>{{end}}{{else}}–{{end}}</td>
+    <td>{{if .Cap}}<div class="meter {{.Tone}}"><i style="width:{{printf "%.0f" (minf .Pct 100.0)}}%"></i></div><span class="small {{if eq .Tone "bad"}}bad{{else if eq .Tone "warn"}}warn-t{{else}}muted{{end}}">{{printf "%.0f" .Pct}} %{{if .Note}} · {{.Note}}{{end}}</span>{{else if .Note}}<span class="small warn-t">{{.Note}}</span>{{end}}</td>
+    <td class="nowrap" style="text-align:right">{{if and $p.CanEdit (ne .Kind "load")}}<a class="btn ghost sm" data-modal href="{{.AddURL}}" title="Unterposten hinzufügen">{{icon "plus"}}</a>{{end}}</td>
+  </tr>
+  {{end}}
+  </tbody>
+</table></div>
+<p class="muted small" style="margin-top:8px">Richtwerte: Stromstärke aus Last, Spannung und cos φ 0,9, ab 80 % „knapp“. Die Auslegung von Aggregat, Kabeln, Verteilern und Absicherung (Selektivität, Leitungsquerschnitt, FI) macht eine Elektrofachkraft.</p>
+{{else}}<div class="tblwrap"><div class="empty">{{$.M.Empty}} Beginne mit einer Einspeisung (Aggregat oder Hausanschluss), hänge Verteiler daran und dann die Verbraucher.</div></div>{{end}}
+{{end}}
+
+{{define "x_checklists"}}{{$x := .Extra}}
+{{if $x.Lists}}
+<div class="grid2" style="margin-bottom:18px">
+{{range $x.Lists}}
+  <div class="panel" style="margin-bottom:0">
+    <h2><span>{{.Name}}</span><span class="muted" style="font-family:var(--sans);font-size:13px;font-weight:400">{{.Done}} / {{.Total}}</span></h2>
+    <div class="meter {{if eq .Done .Total}}good{{end}}"><i style="width:{{printf "%.0f" .Pct}}%"></i></div>
+    {{if and $x.CanEdit .Done}}<form method="post" action="/e/{{$x.EID}}/m/checklists/reset" style="margin-top:8px"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><input type="hidden" name="list" value="{{.Name}}"><button class="btn ghost sm" data-confirm="Alle Häkchen dieser Liste entfernen?">Zurücksetzen</button></form>{{end}}
+  </div>
+{{end}}
+</div>
+{{end}}
+{{end}}
+
+{{define "x_logistics"}}{{$x := .Extra}}
+<div class="kpis">
+  <div class="kpi"><div class="l">Strecke gesamt</div><div class="v">{{num $x.KM}} km</div><div class="s">alle Fahrten</div></div>
+  {{if $x.ShowCost}}<div class="kpi"><div class="l">Fahrtkosten</div><div class="v">{{eur $x.Cost}}</div><div class="s">fließen ins Budget ein</div></div>{{end}}
+  <div class="kpi"><div class="l">Freie Plätze</div><div class="v">{{$x.Seats}}</div><div class="s">in Team-Anfahrten</div></div>
+</div>
+{{if not $x.HasLoc}}<p class="muted small" style="margin:-6px 0 12px">Für die automatische Entfernung braucht das Event eine Location mit Pin auf der Karte.</p>{{else if $x.Unknown}}<p class="muted small" style="margin:-6px 0 12px">{{$x.Unknown}} Fahrten haben keine Strecke: Gegenstelle mit Pin wählen oder die Kilometer eintragen.</p>{{end}}
+{{end}}
+
+{{define "x_neighbors"}}{{$x := .Extra}}
+<div class="kpis">
+  <div class="kpi"><div class="l">Informiert</div><div class="v">{{$x.Informed}} / {{$x.Total}}</div><div class="s">{{if $x.Todo}}{{$x.Todo}} noch offen{{else}}&nbsp;{{end}}</div></div>
+  <div class="kpi {{if $x.Complaints}}bad{{end}}"><div class="l">Beschwerden / Rückfragen</div><div class="v">{{$x.Complaints}}</div><div class="s">&nbsp;</div></div>
+  <a class="kpi" href="/e/{{$x.EID}}/neighbors/letter"><div class="l">Anwohner-Brief</div><div class="v" style="font-size:18px;line-height:1.7">Brief erstellen</div><div class="s">zum Ausdrucken oder Kopieren</div></a>
+</div>
+{{end}}
+
+{{define "x_gear"}}{{$g := .Extra}}
+{{if $g.Total}}
+<details class="panel d" style="margin-top:18px">
+  <summary>Auf- und Abbau-Reihenfolge{{if $g.Unordered}} <span class="muted small">· {{$g.Unordered}} ohne Reihenfolge{{end}}{{if $g.Unplaced}}, {{$g.Unplaced}} ohne Standort{{end}}</span></summary>
+  <div class="grid2" style="margin-top:10px">
+    <div><h3 style="margin-bottom:6px">Aufbau</h3><ol class="small" style="margin:0;padding-left:20px">{{range $g.Setup}}<li>{{.Item}}{{if .Qty}} ×{{.Qty}}{{end}}{{if .Place}} <span class="muted">→ {{.Place}}</span>{{end}} {{badge .Status .Color}}</li>{{end}}</ol></div>
+    <div><h3 style="margin-bottom:6px">Abbau (umgekehrt)</h3><ol class="small" style="margin:0;padding-left:20px">{{range $g.Teardown}}<li>{{.Item}}{{if .Qty}} ×{{.Qty}}{{end}}{{if .Place}} <span class="muted">← {{.Place}}</span>{{end}}</li>{{end}}</ol></div>
+  </div>
+  <p class="muted small" style="margin:8px 0 0">Trage bei Material eine „Aufbau-Reihenfolge“ und den „Standort im Lageplan“ ein. Der Abbau ergibt sich umgekehrt.</p>
+</details>
+{{end}}
+{{end}}

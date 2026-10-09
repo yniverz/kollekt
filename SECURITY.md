@@ -10,6 +10,7 @@ Sicherheitslücken bitte **nicht** als öffentliches Issue melden, sondern über
 * Jede Abfrage prüft Event-Mitgliedschaft, Modulrecht und Bereichszuordnung auf dem Server. Ausgeblendete Felder werden nicht ausgeliefert.
 * Strikte Content-Security-Policy ohne Inline-Skripte, `X-Frame-Options: DENY`, `nosniff`.
 * Kalender-Abo-Links sind zufällig (192 Bit), werden nur als Hash gespeichert, sind pro Person und Event widerrufbar und enthalten keine Beträge.
+* Wetterdaten holt der Server selbst von Open-Meteo (feste Adresse, keine Nutzereingabe in der URL, Antworten begrenzt und gecacht, abschaltbar mit `KOLLEKT_WEATHER=off`).
 * Kartenfunktionen sprechen nur die konfigurierten Kartendienste an (CSP-Whitelist) und lassen sich mit `KOLLEKT_MAPS=off` komplett abschalten. Plan-Bilder werden nur ausgeliefert, wenn sie wirklich PNG, JPEG, GIF oder WebP sind (kein SVG), mit `nosniff` und `sandbox`-CSP.
 * Anhänge liegen unter zufälligen Namen im Datenordner und werden nur als Download (`attachment`, `application/octet-stream`) ausgeliefert.
 * Datenordner und Datenbank sind nur für den Prozessbenutzer lesbar. Der Container läuft ohne Root-Rechte.

@@ -250,6 +250,23 @@ type apiItem struct {
 	Geom     json.RawMessage `json:"geom"`
 	Notes    string          `json:"notes"`
 	Editable bool            `json:"editable"`
+	Width    float64         `json:"width"`
+	Gear     []string        `json:"gear,omitempty"`
+}
+
+// gearAt lists equipment placed at a plan object.
+func (c *C) gearAt(itemID int64) []string {
+	var out []string
+	for _, e := range c.Recs("equipment") {
+		if e.I("place") == itemID {
+			t := e.S("item")
+			if q := e.S("qty"); q != "" && q != "1" {
+				t += " ×" + q
+			}
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 func (c *C) apiItemOf(r *Rec, colors map[int64]string) apiItem {
@@ -263,7 +280,7 @@ func (c *C) apiItemOf(r *Rec, colors map[int64]string) apiItem {
 		g = json.RawMessage("null")
 	}
 	return apiItem{ID: r.ID, Title: r.S("title"), Kind: r.S("kind"), Area: r.I("area"), AreaName: c.RefTitle("areas", r.I("area")), Color: col,
-		Geom: g, Notes: r.S("notes"), Editable: c.itemEditable(r.I("area"))}
+		Geom: g, Notes: r.S("notes"), Editable: c.itemEditable(r.I("area")), Width: r.N("width_m"), Gear: c.gearAt(r.ID)}
 }
 
 func (c *C) handleSiteData(w http.ResponseWriter, r *http.Request) {
@@ -322,8 +339,20 @@ func (c *C) handleSiteData(w http.ResponseWriter, r *http.Request) {
 	if plan.S("mode") != "map" && c.A.planImage(plan.ID) != nil {
 		img = fmt.Sprintf("/e/%d/lageplan/%d/image?v=%d", c.Event.ID, plan.ID, plan.Updated.Unix())
 	}
+	density, escapeW := plan.N("density"), plan.N("escape_w")
+	if density <= 0 {
+		density = 2
+	}
+	if escapeW <= 0 {
+		escapeW = 0.2
+	}
+	guests := 0
+	if c.can("calc") && c.Level("calc") >= 1 && !c.scoped() {
+		guests = c.Baseline()
+	}
 	jsonOut(w, 200, map[string]any{
-		"plan":  map[string]any{"id": plan.ID, "name": plan.S("name"), "mode": plan.S("mode"), "widthM": plan.N("width_m"), "lat": lat, "lng": lng, "zoom": zoom, "image": img},
+		"plan": map[string]any{"id": plan.ID, "name": plan.S("name"), "mode": plan.S("mode"), "widthM": plan.N("width_m"), "lat": lat, "lng": lng, "zoom": zoom, "image": img,
+			"density": density, "escapeW": escapeW, "guests": guests, "capacity": c.locationCapacity()},
 		"items": items, "areas": areas, "kinds": kinds, "canEdit": c.CanEdit("sitemap"), "canPlan": c.canPlan(),
 	})
 }
@@ -344,6 +373,7 @@ func (c *C) handleSiteItemSave(w http.ResponseWriter, r *http.Request) {
 		Area  int64           `json:"area"`
 		Geom  json.RawMessage `json:"geom"`
 		Notes string          `json:"notes"`
+		Width float64         `json:"width"`
 	}
 	if json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&in) != nil {
 		jsonOut(w, 400, map[string]string{"error": "Ungültige Anfrage."})
@@ -361,6 +391,10 @@ func (c *C) handleSiteItemSave(w http.ResponseWriter, r *http.Request) {
 	kind := siteKind(in.Kind).Key
 	if in.Kind != "" && in.Kind != kind {
 		kind = "other"
+	}
+	if math.IsNaN(in.Width) || in.Width < 0 || in.Width > 200 {
+		jsonOut(w, 422, map[string]string{"error": "Die Breite muss zwischen 0 und 200 Metern liegen."})
+		return
 	}
 	var area int64
 	if in.Area != 0 {
@@ -394,6 +428,11 @@ func (c *C) handleSiteItemSave(w http.ResponseWriter, r *http.Request) {
 	rec.D["plan"], rec.D["title"], rec.D["kind"], rec.D["area"], rec.D["geom"], rec.D["notes"] = itoa(plan.ID), title, kind, itoa(area), geom, strings.TrimSpace(in.Notes)
 	if area == 0 {
 		rec.D["area"] = ""
+	}
+	if in.Width > 0 {
+		rec.D["width_m"] = numStr(math.Round(in.Width*100) / 100)
+	} else {
+		delete(rec.D, "width_m")
 	}
 	if err := c.A.saveRec(rec); err != nil {
 		jsonOut(w, 500, map[string]string{"error": "Speichern fehlgeschlagen."})
@@ -669,6 +708,14 @@ func (c *C) handlePlanUpdate(w http.ResponseWriter, r *http.Request) {
 		delete(plan.D, "width_m")
 	} else if validNum(v) && parseNum(v) > 0 && parseNum(v) < 100000 {
 		plan.D["width_m"] = numStr(parseNum(v))
+	}
+	for _, k := range []string{"density", "escape_w"} {
+		v := strings.TrimSpace(r.FormValue(k))
+		if v == "" {
+			delete(plan.D, k)
+		} else if validNum(v) && parseNum(v) > 0 && parseNum(v) < 100 {
+			plan.D[k] = numStr(parseNum(v))
+		}
 	}
 	_ = c.A.saveRec(plan)
 	if plan.S("mode") != "map" {

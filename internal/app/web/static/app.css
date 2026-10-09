@@ -274,6 +274,7 @@ details.d > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 .dim { opacity: .6; }
 .print-only { display: none; }
 @media print {
+  .noprint { display: none !important; }
   .top, .side, .actions, .tabs, .filters, .btn, .flash { display: none !important; }
   .shell.has-side { display: block; } .main { padding: 0; max-width: none; }
   body { background: #fff; color: #000; } .panel, .tblwrap { border-color: #999; }
@@ -333,3 +334,6 @@ details.d > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
   .sp-wrap { display: block; } #sp-side .noprint, .sp-bar { display: none !important; }
   #sp-map { height: 520px; border-color: #999; }
 }
+
+.side-sec { font-size: 11.5px; font-weight: 600; color: var(--ink-3); margin: 14px 8px 3px; letter-spacing: .02em; }
+@media (max-width: 860px) { .side-sec { display: none; } }
