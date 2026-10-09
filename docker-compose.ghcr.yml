@@ -1,11 +1,11 @@
-# Für Portainer: Stacks > Add stack > Repository (dieses Repo).
-# Diese Variante baut das Image selbst. Beim Aktualisieren in Portainer "Re-pull image" ausschalten (es gibt nichts zu ziehen),
-# stattdessen "Pull and redeploy" nutzen. Wer ein fertiges Image will: docker-compose.ghcr.yml.
-# Beim ersten Start legt KOLLEKT_ADMIN_USER / KOLLEKT_ADMIN_PASSWORD das Admin-Konto an.
-# Ohne diese Variablen erscheint beim ersten Aufruf eine Einrichtungsseite.
+# Variante mit fertigem Image aus der GitHub Container Registry (schnell, kein Build auf dem Server).
+# Voraussetzung: Das Paket ghcr.io/yniverz/kollekt ist auf GitHub öffentlich
+# (GitHub > Profil > Packages > kollekt > Package settings > Change visibility > Public).
+# Portainer: Stacks > Add stack > Repository, Compose-Pfad docker-compose.ghcr.yml. Aktualisieren mit "Re-pull image and redeploy".
 services:
   kollekt:
-    build: .   # baut das Image aus dem Quellcode (kein Registry-Image nötig)
+    image: ghcr.io/yniverz/kollekt:latest
+    pull_policy: always
     container_name: kollekt
     restart: unless-stopped
     ports:

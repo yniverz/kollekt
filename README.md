@@ -52,7 +52,9 @@ docker compose up -d --build
 
 Danach `http://localhost:8080` öffnen. Beim ersten Aufruf erscheint die Einrichtung für das Admin-Konto. Alternativ legen die Variablen `KOLLEKT_ADMIN_USER` und `KOLLEKT_ADMIN_PASSWORD` das Konto beim ersten Start an.
 
-**Portainer:** Stacks → Add stack → *Repository*, Repository URL `https://github.com/yniverz/kollekt`, Reference `refs/heads/main`, Compose-Pfad `docker-compose.yml`. Portainer baut das Image dann selbst (das Repo ist öffentlich, ein Token ist nicht nötig). Alternativ den Inhalt der Compose-Datei in den *Web editor* kopieren. Wer lieber ein fertiges Image zieht: GitHub Actions veröffentlicht `ghcr.io/yniverz/kollekt:latest` (amd64 und arm64). Dazu das Paket einmalig unter GitHub → Profil → Packages → kollekt → *Package settings* → *Change visibility* auf „Public“ stellen und in der Compose-Datei `build: .` durch `image: ghcr.io/yniverz/kollekt:latest` ersetzen.
+**Portainer, Variante A (baut selbst, funktioniert sofort):** Stacks → Add stack → *Repository*, URL `https://github.com/yniverz/kollekt`, Reference `refs/heads/main`, Compose-Pfad `docker-compose.yml`. Das Repo ist öffentlich, ein Token ist nicht nötig. Portainer baut das Image dabei selbst. Zum Aktualisieren „Pull and redeploy“ nutzen und die Option *Re-pull image* ausgeschaltet lassen, es gibt nichts zu ziehen. Sonst meldet Docker „pull access denied for kollekt“.
+
+**Variante B (fertiges Image, schneller):** GitHub Actions veröffentlicht `ghcr.io/yniverz/kollekt:latest` (amd64 und arm64). Damit Portainer es ziehen darf, einmalig das Paket auf GitHub öffentlich stellen (Profil → Packages → kollekt → *Package settings* → *Change visibility* → *Public*) und als Compose-Pfad `docker-compose.ghcr.yml` nehmen. Dort funktioniert *Re-pull image and redeploy*.
 
 | Variable | Standard | Bedeutung |
 |---|---|---|
