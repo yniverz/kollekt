@@ -47,6 +47,8 @@ Danach `http://localhost:8080` öffnen. Beim ersten Aufruf erscheint die Einrich
 
 | Variable | Standard | Bedeutung |
 |---|---|---|
+| `KOLLEKT_PORT` | `8080` | Nur Compose: Port auf dem Host, unter dem Kollekt erreichbar ist (in Portainer als Environment-Variable des Stacks setzen). Im Container lauscht Kollekt immer auf 8080 |
+|---|---|---|
 | `KOLLEKT_DATA` | `/data` | Ordner mit der SQLite-Datenbank (als Volume einbinden) |
 | `KOLLEKT_ADDR` | `:8080` | Listen-Adresse |
 | `KOLLEKT_SECURE_COOKIES` | leer | `1` erzwingt Secure-Cookies (nur mit HTTPS!). Hinter HTTPS-Proxy (`X-Forwarded-Proto: https`) wird das automatisch erkannt. Bei reinem HTTP leer lassen, sonst klappt der Login nicht |

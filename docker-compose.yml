@@ -8,7 +8,8 @@ services:
     container_name: kollekt
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      # Port, unter dem Kollekt auf dem Host erreichbar ist. In Portainer als Environment-Variable KOLLEKT_PORT setzen.
+      - "${KOLLEKT_PORT:-8080}:8080"
     environment:
       TZ: Europe/Berlin
       # Hinter einem HTTPS-Proxy wird "Secure" automatisch erkannt (X-Forwarded-Proto).
