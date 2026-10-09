@@ -422,11 +422,48 @@ func TestTransportCost(t *testing.T) {
 }
 
 func TestWeatherWarnings(t *testing.T) {
-	if w := weatherWarn(WeatherDay{TMax: 20, TMin: 10, Rain: 0, RainPct: 10, Gust: 20}); len(w) != 0 {
+	if w := weatherWarn(WeatherDay{TMax: 20, TMin: 10, Rain: 0, RainPct: 10, Gust: 20}, defaultLimits()); len(w) != 0 {
 		t.Fatalf("calm day warned: %v", w)
 	}
-	if w := weatherWarn(WeatherDay{TMax: 33, TMin: 20, Rain: 12, RainPct: 80, Gust: 70}); len(w) != 3 {
+	if w := weatherWarn(WeatherDay{TMax: 33, TMin: 20, Rain: 12, RainPct: 80, Gust: 70}, defaultLimits()); len(w) != 3 {
 		t.Fatalf("expected rain, wind and heat warnings, got %v", w)
+	}
+}
+
+func TestLimitsAreConfigurable(t *testing.T) {
+	_, e, c := testApp(t)
+	d := WeatherDay{TMax: 20, TMin: 10, Rain: 1, RainPct: 40, Gust: 35}
+	if w := weatherWarn(d, c.limits()); len(w) != 0 {
+		t.Fatalf("defaults must not warn: %v", w)
+	}
+	e.setting("limits", Limits{RainPct: 30, RainMM: 5, GustKMH: 30, HeatC: 30, ColdC: 3, Density: 3, EscapeW: 0.3, CosPhi: 0.8, PowerWarn: 70, PowerReserve: 30})
+	lim := c.limits()
+	if w := weatherWarn(d, lim); len(w) != 2 {
+		t.Fatalf("stricter limits must warn about rain and wind: %v", w)
+	}
+	if lim.Density != 3 || lim.CosPhi != 0.8 {
+		t.Fatalf("limits not applied: %+v", lim)
+	}
+	e.setting("limits", Limits{RainPct: -5, GustKMH: 9999, Density: 0})
+	if got := c.limits(); got.RainPct != 60 || got.GustKMH != 50 || got.Density != 2 {
+		t.Fatalf("invalid values must fall back to defaults: %+v", got)
+	}
+}
+
+func TestPowerUsesConfiguredReserveAndThreshold(t *testing.T) {
+	a, e, c := testApp(t)
+	e.Modules = []string{"power"}
+	src := &Rec{EventID: e.ID, Module: "power", D: map[string]string{"name": "A", "kind": "source", "watts": "10000"}}
+	_ = a.saveRec(src)
+	_ = a.saveRec(&Rec{EventID: e.ID, Module: "power", D: map[string]string{"name": "L", "kind": "load", "parent": itoa(src.ID), "watts": "7500"}})
+	if v := c.powerTree(); v.Rows[0].Tone != "good" || !near(v.Needed, 7500/0.8) {
+		t.Fatalf("defaults: tone %s needed %v", v.Rows[0].Tone, v.Needed)
+	}
+	e.setting("limits", Limits{RainPct: 60, RainMM: 5, GustKMH: 50, HeatC: 30, ColdC: 3, Density: 2, EscapeW: 0.2, CosPhi: 0.9, PowerWarn: 70, PowerReserve: 50})
+	c.invalidate()
+	v := c.powerTree()
+	if v.Rows[0].Tone != "warn" || !near(v.Needed, 15000) {
+		t.Fatalf("configured: tone %s needed %v", v.Rows[0].Tone, v.Needed)
 	}
 }
 

@@ -146,7 +146,7 @@
         (d.warn || []).forEach(function (m) { row.appendChild(node('div', 'warn-t', '⚠ ' + m)); });
         body.appendChild(row);
       });
-      body.appendChild(node('div', 'muted small', w.note + ' Quelle: ' + w.source + '.'));
+      body.appendChild(node('div', 'muted small', w.note + ' Quelle: ' + w.source + '. Ohne Gewähr, Schwellen unter Event-Einstellungen → Richtwerte.'));
     }).catch(function () { body.textContent = 'Wetterdaten sind gerade nicht erreichbar.'; });
   })();
 

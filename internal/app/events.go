@@ -116,7 +116,7 @@ func (c *C) renderSettings(form map[string]string, errMsg string) {
 	}
 	c.Page("settings.html", map[string]any{
 		"Title": "Event-Einstellungen", "Nav": c.eventNav(""), "Form": form, "Statuses": eventStatuses, "Mods": mods,
-		"Locations": c.A.locationOptions(e.LocationID), "Error": errMsg, "Tax": c.tax(),
+		"Locations": c.A.locationOptions(e.LocationID), "Error": errMsg, "Tax": c.tax(), "Lim": c.limits(),
 	})
 }
 
@@ -156,6 +156,7 @@ func (a *App) settingsSave(c *C) {
 	if (tx.Basis == "net" || tx.Basis == "gross") && (tx.Entry == "net" || tx.Entry == "gross") && tx.VAT >= 0 && tx.VAT <= 100 {
 		e.setting("tax", tx)
 	}
+	c.handleLimitsSave(r)
 	var mods []string
 	for _, m := range eventModules() {
 		if m.Key == "overview" || m.Core {

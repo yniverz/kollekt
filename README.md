@@ -89,6 +89,10 @@ Go 1.26, keine CGO-Abhängigkeit (SQLite über `modernc.org/sqlite`), Oberfläch
 * `calc.go` und `bar.go` enthalten die Finanz- und Bar-Berechnung, `extras.go` die modulspezifischen Ansichten (Zeitleiste, Besetzung, Bereichskarten).
 * `seed.go` enthält die mitgelieferten Rollen und Event-Vorlagen. Preise in den Bar-Vorlagen sind Beispielwerte.
 
+## Richtwerte
+
+Unter *Event-Einstellungen → Richtwerte* stellst du pro Event ein: ab wann Wetterwarnungen erscheinen (Regenwahrscheinlichkeit und -menge, Böen, Hitze, Kälte), Personen pro m² und Rettungswegbreite für den Dichte-Check (pro Plan überschreibbar), cos φ, „knapp“-Schwelle und Reserve beim Strom. Es sind Orientierungswerte ohne Rechtswirkung. Fehlerhafte Eingaben fallen auf die Startwerte zurück.
+
 ## Fristen und Kalender
 
 * **Relative Fristen:** Bei Aufgaben, Genehmigungen und Budget-Posten kannst du „Frist relativ zum Event“ setzen (z. B. 42 Tage vorher, negativ = nach dem Event). Das Datum wird aus dem Eventtermin berechnet und wandert mit, wenn du den Termin änderst. Die mitgelieferten Vorlagen bringen Vorschläge für Vorlaufzeiten mit. Das sind grobe Richtwerte, keine amtlichen Fristen.

@@ -339,12 +339,13 @@ func (c *C) handleSiteData(w http.ResponseWriter, r *http.Request) {
 	if plan.S("mode") != "map" && c.A.planImage(plan.ID) != nil {
 		img = fmt.Sprintf("/e/%d/lageplan/%d/image?v=%d", c.Event.ID, plan.ID, plan.Updated.Unix())
 	}
+	lim := c.limits()
 	density, escapeW := plan.N("density"), plan.N("escape_w")
 	if density <= 0 {
-		density = 2
+		density = lim.Density
 	}
 	if escapeW <= 0 {
-		escapeW = 0.2
+		escapeW = lim.EscapeW
 	}
 	guests := 0
 	if c.can("calc") && c.Level("calc") >= 1 && !c.scoped() {
@@ -622,7 +623,7 @@ func (c *C) handleLageplan(w http.ResponseWriter, r *http.Request) {
 	}
 	data := map[string]any{
 		"Title": "Lageplan", "Nav": c.eventNav("sitemap"), "Tabs": tabs, "Active": active, "CanEdit": c.CanEdit("sitemap"), "CanPlan": c.canPlan(),
-		"Areas": areas, "Kinds": siteKinds, "MapsOn": mapCfg.Enabled, "ScopedAreas": c.scoped(),
+		"Areas": areas, "Kinds": siteKinds, "Limits": c.limits(), "MapsOn": mapCfg.Enabled, "ScopedAreas": c.scoped(),
 	}
 	if active != nil {
 		data["API"] = fmt.Sprintf("/e/%d/lageplan/%d", c.Event.ID, active.ID)

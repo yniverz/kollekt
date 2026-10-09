@@ -146,7 +146,7 @@ type SnapOpts struct {
 // snapshot captures an event's structure as a reusable payload.
 func (a *App) snapshot(e *Event, o SnapOpts) TplPayload {
 	p := TplPayload{Modules: append([]string{}, e.Modules...), KeepGlobal: o.People, Settings: map[string]json.RawMessage{}}
-	for _, k := range []string{"calc", "bar", "tax"} {
+	for _, k := range []string{"calc", "bar", "tax", "limits"} {
 		if raw, ok := e.Settings[k]; ok {
 			p.Settings[k] = raw
 		}

@@ -127,8 +127,6 @@ func extendModules() {
 
 // ---------- power ----------
 
-const cosPhi = 0.9
-
 type PowerRow struct {
 	R         *Rec
 	Level     int
@@ -156,6 +154,9 @@ type PowerView struct {
 	Next      string
 	CanEdit   bool
 	HasSource bool
+	Reserve   float64
+	WarnPct   float64
+	Cos       float64
 }
 
 func phaseFactor(r *Rec) float64 {
@@ -173,6 +174,8 @@ func volts(r *Rec) float64 {
 }
 
 func (c *C) powerTree() *PowerView {
+	lim := c.limits()
+	cosPhi := lim.CosPhi
 	recs := c.Recs("power")
 	byID := map[int64]*Rec{}
 	children := map[int64][]*Rec{}
@@ -236,7 +239,7 @@ func (c *C) powerTree() *PowerView {
 				case row.Pct > 100:
 					row.Tone, row.Note = "bad", "Überlast"
 					v.Warns = append(v.Warns, fmt.Sprintf("%s: %s %% der Leistung, Überlast", r.S("name"), fmtNum(math.Round(row.Pct))))
-				case row.Pct >= 80:
+				case row.Pct >= lim.PowerWarn:
 					row.Tone, row.Note = "warn", "knapp"
 				default:
 					row.Tone = "good"
@@ -287,8 +290,9 @@ func (c *C) powerTree() *PowerView {
 			v.Total += loadOf(r, 0)
 		}
 	}
-	v.Needed = v.Total / 0.8
-	v.KVA = v.Needed / 0.8 / 1000
+	v.Needed = v.Total / (1 - lim.PowerReserve/100)
+	v.KVA = v.Needed / cosPhi / 1000
+	v.Reserve, v.WarnPct, v.Cos = lim.PowerReserve, lim.PowerWarn, cosPhi
 	return v
 }
 

@@ -122,7 +122,7 @@
 {{if $p.Rows}}
 <div class="kpis">
   <div class="kpi"><div class="l">Gesamtlast</div><div class="v">{{num (div1000 $p.Total)}} kW</div><div class="s">alle Verbraucher, mit Gleichzeitigkeit</div></div>
-  <div class="kpi"><div class="l">Benötigte Einspeisung</div><div class="v">{{num (div1000 $p.Needed)}} kW</div><div class="s">inkl. 20 % Reserve, ≈ {{num $p.KVA}} kVA</div></div>
+  <div class="kpi"><div class="l">Benötigte Einspeisung</div><div class="v">{{num (div1000 $p.Needed)}} kW</div><div class="s">inkl. {{num $p.Reserve}} % Reserve, ≈ {{num $p.KVA}} kVA</div></div>
 </div>
 {{range $p.Warns}}<div class="errbox">{{.}}</div>{{end}}
 <div class="tblwrap"><table class="tbl">
@@ -141,7 +141,7 @@
   {{end}}
   </tbody>
 </table></div>
-<p class="muted small" style="margin-top:8px">Richtwerte: Stromstärke aus Last, Spannung und cos φ 0,9, ab 80 % „knapp“. Die Auslegung von Aggregat, Kabeln, Verteilern und Absicherung (Selektivität, Leitungsquerschnitt, FI) macht eine Elektrofachkraft.</p>
+<p class="muted small" style="margin-top:8px">Richtwerte: Stromstärke aus Last, Spannung und cos φ {{num $p.Cos}}, ab {{num $p.WarnPct}} % „knapp“ (einstellbar unter Event-Einstellungen → Richtwerte). Die Auslegung von Aggregat, Kabeln, Verteilern und Absicherung (Selektivität, Leitungsquerschnitt, FI) macht eine Elektrofachkraft.</p>
 {{else}}<div class="tblwrap"><div class="empty">{{$.M.Empty}} Beginne mit einer Einspeisung (Aggregat oder Hausanschluss), hänge Verteiler daran und dann die Verbraucher.</div></div>{{end}}
 {{end}}
 

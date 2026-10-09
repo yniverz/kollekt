@@ -19,6 +19,23 @@
     <div class="field"><label class="lbl" for="te">Kosten werden standardmäßig erfasst als</label><select id="te" name="tax_entry"><option value="net" {{if eq .Tax.Entry "net"}}selected{{end}}>Netto</option><option value="gross" {{if eq .Tax.Entry "gross"}}selected{{end}}>Brutto</option></select></div>
     <div class="field"><label class="lbl" for="tv">Standard-USt-Satz</label><div class="inp-suffix"><input id="tv" type="number" step="any" min="0" max="100" name="tax_vat" value="{{.Tax.VAT}}"><span>%</span></div><div class="help">Gilt für Posten ohne eigenen Satz. Verkaufspreise und Eintritt sind immer Brutto-Preise.</div></div>
   </div>
+  <h2 style="margin-top:8px">Richtwerte</h2>
+  <p class="muted small">Schwellen für Warnungen und Rechnungen in diesem Event. Alles sind Orientierungswerte ohne Rechtswirkung: Maßgeblich sind Bescheid, Behörden, Prüfbuch und Elektrofachkraft. Die Vorgaben sind Startwerte, passe sie an deine Situation an.</p>
+  <div class="form-grid">
+    <div class="field wide"><b>Wetterwarnungen</b></div>
+    <div class="field"><label class="lbl" for="l1">Regenwahrscheinlichkeit ab</label><div class="inp-suffix"><input id="l1" type="number" step="any" name="rain_pct" value="{{.Lim.RainPct}}"><span>%</span></div></div>
+    <div class="field"><label class="lbl" for="l2">oder Regenmenge pro Tag ab</label><div class="inp-suffix"><input id="l2" type="number" step="any" name="rain_mm" value="{{.Lim.RainMM}}"><span>mm</span></div></div>
+    <div class="field"><label class="lbl" for="l3">Böen ab</label><div class="inp-suffix"><input id="l3" type="number" step="any" name="gust_kmh" value="{{.Lim.GustKMH}}"><span>km/h</span></div><div class="help">Für Bühnen, Zelte und Traversen gilt die zulässige Windlast laut Prüfbuch.</div></div>
+    <div class="field"><label class="lbl" for="l4">Hitze ab (Tageshöchstwert)</label><div class="inp-suffix"><input id="l4" type="number" step="any" name="heat_c" value="{{.Lim.HeatC}}"><span>°C</span></div></div>
+    <div class="field"><label class="lbl" for="l5">Kälte bis (Tagestiefstwert)</label><div class="inp-suffix"><input id="l5" type="number" step="any" name="cold_c" value="{{.Lim.ColdC}}"><span>°C</span></div></div>
+    <div class="field wide"><b>Besucherfläche und Fluchtwege</b> <span class="muted small">(Standard für alle Pläne, pro Plan überschreibbar)</span></div>
+    <div class="field"><label class="lbl" for="l6">Personen pro m²</label><input id="l6" type="number" step="any" name="density" value="{{.Lim.Density}}"></div>
+    <div class="field"><label class="lbl" for="l7">Rettungsweg-Breite je 100 Personen</label><div class="inp-suffix"><input id="l7" type="number" step="any" name="escape_w" value="{{.Lim.EscapeW}}"><span>m</span></div></div>
+    <div class="field wide"><b>Strom</b></div>
+    <div class="field"><label class="lbl" for="l8">cos φ für Stromstärken</label><input id="l8" type="number" step="any" name="cos_phi" value="{{.Lim.CosPhi}}"></div>
+    <div class="field"><label class="lbl" for="l9">„Knapp“ ab Auslastung</label><div class="inp-suffix"><input id="l9" type="number" step="any" name="power_warn" value="{{.Lim.PowerWarn}}"><span>%</span></div></div>
+    <div class="field"><label class="lbl" for="l10">Reserve auf die Gesamtlast</label><div class="inp-suffix"><input id="l10" type="number" step="any" name="power_reserve" value="{{.Lim.PowerReserve}}"><span>%</span></div></div>
+  </div>
   <h2 style="margin-top:8px">Module</h2>
   <p class="muted small">Nur aktive Module erscheinen in der Navigation. Daten deaktivierter Module bleiben erhalten.</p>
   <div style="columns:2 280px;column-gap:24px">

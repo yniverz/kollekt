@@ -63,18 +63,18 @@ func wmoDesc(code float64) string {
 	return "wechselhaft"
 }
 
-func weatherWarn(d WeatherDay) []string {
+func weatherWarn(d WeatherDay, l Limits) []string {
 	var w []string
-	if d.RainPct >= 60 || d.Rain >= 5 {
+	if d.RainPct >= l.RainPct || d.Rain >= l.RainMM {
 		w = append(w, "Regen wahrscheinlich: Wetterschutz für Technik, Kasse und Bar planen")
 	}
-	if d.Gust >= 50 {
+	if d.Gust >= l.GustKMH {
 		w = append(w, "Starke Böen: Bühne, Zelte und Traversen laut Prüfbuch auf zulässige Windlast prüfen")
 	}
-	if d.TMax >= 30 {
+	if d.TMax >= l.HeatC {
 		w = append(w, "Hitze: Wasserstellen, Schatten und Sanitäts-Info einplanen")
 	}
-	if d.TMin <= 3 {
+	if d.TMin <= l.ColdC {
 		w = append(w, "Kalt: Heizung, Garderobe und warme Getränke einplanen")
 	}
 	return w
@@ -137,7 +137,6 @@ func toDays(o *omDaily) []WeatherDay {
 	for i, t := range o.Daily.Time {
 		d := WeatherDay{Date: t, Label: fmtDate(t), TMax: math.Round(val(o.Daily.TMax, i)), TMin: math.Round(val(o.Daily.TMin, i)), Rain: math.Round(val(o.Daily.Rain, i)*10) / 10,
 			RainPct: val(o.Daily.RainP, i), Gust: math.Round(val(o.Daily.Gust, i)), Desc: wmoDesc(val(o.Daily.Code, i))}
-		d.Warn = weatherWarn(d)
 		days = append(days, d)
 	}
 	return days
@@ -222,7 +221,6 @@ func computeWeather(lat, lng float64, start, end string) *WeatherOut {
 	}
 	d := WeatherDay{Date: from, Label: "Ø der letzten " + fmt.Sprint(years) + " Jahre", TMax: math.Round(tmax / n), TMin: math.Round(tmin / n), Rain: math.Round(rain/n*10) / 10,
 		RainPct: math.Round(wet / n * 100), Gust: math.Round(gust), Desc: "Klima um diesen Termin"}
-	d.Warn = weatherWarn(d)
 	return &WeatherOut{Mode: "climate", Days: []WeatherDay{d}, Source: "Open-Meteo",
 		Note: fmt.Sprintf("Eine Vorhersage gibt es erst 16 Tage vorher. Hier das typische Wetter an diesen Tagen (Regenanteil = Tage mit mindestens 1 mm, Böen = Höchstwert der letzten %d Jahre).", years)}
 }
@@ -249,5 +247,11 @@ func (c *C) handleWeather(w http.ResponseWriter, r *http.Request) {
 		jsonOut(w, 200, &WeatherOut{Mode: "none", Note: "Für die Wetterdaten fehlt der Eventtermin."})
 		return
 	}
-	jsonOut(w, 200, eventWeather(lat, lng, c.Event.Start, c.Event.End))
+	out := *eventWeather(lat, lng, c.Event.Start, c.Event.End) // copy: the cached value stays untouched
+	lim := c.limits()
+	out.Days = append([]WeatherDay(nil), out.Days...)
+	for i := range out.Days {
+		out.Days[i].Warn = weatherWarn(out.Days[i], lim)
+	}
+	jsonOut(w, 200, &out)
 }
