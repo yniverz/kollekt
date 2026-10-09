@@ -368,14 +368,17 @@ func haversineKm(lat1, lng1, lat2, lng2 float64) float64 {
 
 // eventLatLng is the position of the event's chosen location.
 func (c *C) eventLatLng() (float64, float64, bool) {
+	if c.geoDone {
+		return c.geoLat, c.geoLng, c.geoOK
+	}
+	c.geoDone = true
 	if c.Event.LocationID == 0 {
 		return 0, 0, false
 	}
-	loc := c.A.rec(c.Event.LocationID)
-	if loc == nil {
-		return 0, 0, false
+	if loc := c.A.rec(c.Event.LocationID); loc != nil {
+		c.geoLat, c.geoLng, c.geoOK = parseGeo(loc.S("geo"))
 	}
-	return parseGeo(loc.S("geo"))
+	return c.geoLat, c.geoLng, c.geoOK
 }
 
 // fahrtOneWay is the one-way distance in km: manual value or beeline × 1.3.

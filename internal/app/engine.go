@@ -61,6 +61,10 @@ func (c *C) resolveModule(needEdit bool) *Module {
 	if needEdit {
 		need = 2
 	}
+	if needEdit && m.Key == "siteplans" && !c.canPlan() {
+		c.Error(403, "Pläne dürfen nur Personen ohne Bereichsbeschränkung ändern.")
+		return nil
+	}
 	if c.Level(parent) < need {
 		c.Error(403, "Dafür fehlt dir die Berechtigung.")
 		return nil
@@ -825,6 +829,11 @@ func (c *C) collect(m *Module, rec *Rec) (map[string]string, map[string]string) 
 					v = itoa(id)
 				}
 			}
+		case TColor:
+			if v != "" && !validHexColor(v) {
+				errs[f.Key] = "Bitte eine Farbe wählen."
+				v = ""
+			}
 		case TURL:
 			if v != "" && !strings.HasPrefix(v, "http://") && !strings.HasPrefix(v, "https://") && !strings.HasPrefix(v, "mailto:") {
 				v = "https://" + v
@@ -834,6 +843,9 @@ func (c *C) collect(m *Module, rec *Rec) (map[string]string, map[string]string) 
 		}
 		if f.Required && v == "" {
 			errs[f.Key] = "Pflichtfeld."
+		}
+		if max := maxLen(f.Type); max > 0 && len([]rune(v)) > max && f.Type != TRecipe {
+			errs[f.Key] = fmt.Sprintf("Zu lang (höchstens %d Zeichen).", max)
 		}
 		vals[f.Key] = v
 	}
@@ -974,8 +986,12 @@ func (c *C) handleQuick(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	f := m.Field(r.FormValue("field"))
-	if f == nil || (!f.Quick && f.Type != TBool) {
+	if f == nil || (!f.Quick && f.Type != TBool) || f.NoForm {
 		c.Error(400, "Feld nicht änderbar.")
+		return
+	}
+	if f.Fin && !m.Global && !c.finVisible(rec, m.PermKey()) {
+		c.Error(403, "Dafür fehlt dir die Berechtigung.")
 		return
 	}
 	v := r.FormValue("value")
@@ -1016,4 +1032,29 @@ func (c *C) handleAction(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	c.Error(404, "Aktion nicht gefunden.")
+}
+
+func validHexColor(s string) bool {
+	if len(s) != 7 || s[0] != '#' {
+		return false
+	}
+	for _, r := range s[1:] {
+		if !(r >= '0' && r <= '9' || r >= 'a' && r <= 'f' || r >= 'A' && r <= 'F') {
+			return false
+		}
+	}
+	return true
+}
+
+// maxLen bounds free text so a single field cannot bloat the database or break layouts.
+func maxLen(t FieldType) int {
+	switch t {
+	case TText:
+		return 300
+	case TURL:
+		return 500
+	case TTextarea:
+		return 20000
+	}
+	return 0
 }

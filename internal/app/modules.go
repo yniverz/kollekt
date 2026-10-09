@@ -420,16 +420,6 @@ func eventModules() []*Module {
 	return out
 }
 
-func globalModules() []*Module {
-	var out []*Module
-	for _, m := range modules {
-		if m.Global {
-			out = append(out, m)
-		}
-	}
-	return out
-}
-
 type PermDef struct {
 	Key, Label, Desc string
 }
@@ -443,7 +433,7 @@ func permDefs() []PermDef {
 		out = append(out, PermDef{m.PermKey(), m.Name, m.Desc})
 	}
 	out = append(out,
-		PermDef{"fin", "Kosten & Gagen sehen", "Kostenfelder in Line-up, Personal, Material, Genehmigungen und Location. Ohne dieses Recht bleiben sie verborgen."},
+		PermDef{"fin", "Kosten & Gagen sehen", "Kostenfelder in Line-up, Personal, Material, Genehmigungen, Transport und Location. Ohne dieses Recht bleiben sie verborgen. Wer im Budget Zugriff hat, sieht dort alle Kosten."},
 		PermDef{"settings", "Event-Einstellungen", "Event bearbeiten, Module aktivieren, Mitglieder einladen, als Vorlage speichern, löschen."},
 	)
 	return out
@@ -495,7 +485,13 @@ func relDate(eventStart, rel string) (string, bool) {
 	if !ok {
 		return "", false
 	}
-	return t.AddDate(0, 0, -int(parseNum(rel))).Format("2006-01-02"), true
+	n := parseNum(rel)
+	if n > 3650 {
+		n = 3650
+	} else if n < -3650 {
+		n = -3650
+	}
+	return t.AddDate(0, 0, -int(n)).Format("2006-01-02"), true
 }
 
 // applyRelative recomputes all relative deadlines of an event.

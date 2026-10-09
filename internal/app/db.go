@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -382,16 +381,4 @@ func optLabel(opts []Opt, v string) (string, string) {
 		}
 	}
 	return v, "gray"
-}
-
-func idList(s string) []int64 {
-	var out []int64
-	for _, p := range strings.Split(s, ",") {
-		p = strings.TrimSpace(p)
-		if p == "" {
-			continue
-		}
-		out = append(out, int64(parseNum(p)))
-	}
-	return out
 }

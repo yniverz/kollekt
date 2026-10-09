@@ -74,6 +74,10 @@ Danach `http://localhost:8080` öffnen. Beim ersten Aufruf erscheint die Einrich
 
 **Backup:** Das Volume `/data` enthält alles (`kollekt.db` und der Ordner `files/` mit den Anhängen). Im laufenden Betrieb am besten mit `sqlite3 kollekt.db ".backup backup.db"` sichern oder den Container kurz stoppen.
 
+**Reverse Proxy:** Kollekt muss unter einer eigenen (Sub-)Domain am Pfad `/` laufen, ein Unterpfad wie `/kollekt/` wird nicht unterstützt. Der Proxy sollte `Host` bzw. `X-Forwarded-Host` und `X-Forwarded-Proto` setzen und Uploads bis mindestens 26 MB erlauben (nginx: `client_max_body_size 26m;`). Tritt beim Speichern „Ungültige Herkunft der Anfrage“ auf, fehlt meist der `Host`-Header am Proxy.
+
+**Eigenes Verzeichnis statt Volume:** Bei einem Bind-Mount (`./data:/data`) muss der Ordner dem Benutzer mit der ID 10001 gehören (`chown 10001:10001 data`), sonst kann Kollekt die Datenbank nicht anlegen.
+
 **HTTPS:** Kollekt spricht selbst nur HTTP. Für Zugriff übers Internet einen Reverse Proxy (Caddy, Traefik, nginx Proxy Manager) davorsetzen.
 
 ## Entwicklung

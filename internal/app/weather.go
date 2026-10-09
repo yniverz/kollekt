@@ -135,6 +135,9 @@ func fetchDaily(base string, lat, lng float64, from, to string, withProb bool) (
 func toDays(o *omDaily) []WeatherDay {
 	var days []WeatherDay
 	for i, t := range o.Daily.Time {
+		if i >= len(o.Daily.TMax) || o.Daily.TMax[i] == nil { // no data (yet) for this day
+			continue
+		}
 		d := WeatherDay{Date: t, Label: fmtDate(t), TMax: math.Round(val(o.Daily.TMax, i)), TMin: math.Round(val(o.Daily.TMin, i)), Rain: math.Round(val(o.Daily.Rain, i)*10) / 10,
 			RainPct: val(o.Daily.RainP, i), Gust: math.Round(val(o.Daily.Gust, i)), Desc: wmoDesc(val(o.Daily.Code, i))}
 		days = append(days, d)
@@ -178,7 +181,7 @@ func computeWeather(lat, lng float64, start, end string) *WeatherOut {
 	sd := time.Date(s.Year(), s.Month(), s.Day(), 0, 0, 0, 0, time.UTC)
 	days := int(sd.Sub(td).Hours() / 24)
 	switch {
-	case days >= 0 && days <= 15:
+	case days >= -7 && days <= 15 || (days < -7 && !e.Before(td)):
 		o, err := fetchDaily("https://api.open-meteo.com/v1/forecast", lat, lng, from, to, true)
 		if err != nil {
 			return &WeatherOut{Mode: "none", Note: "Die Wetterdaten sind gerade nicht erreichbar."}

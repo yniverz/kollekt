@@ -464,7 +464,7 @@ func (c *C) handleCalcSave(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		n := strings.TrimSpace(names[i])
-		g := int(parseNum(guests[i]))
+		g := int(math.Min(parseNum(guests[i]), 1000000))
 		if n == "" && g == 0 {
 			continue
 		}
@@ -473,6 +473,12 @@ func (c *C) handleCalcSave(w http.ResponseWriter, r *http.Request) {
 		}
 		if g < 0 {
 			g = 0
+		}
+		if len(s.Scenarios) >= 12 {
+			break
+		}
+		if r := []rune(n); len(r) > 40 {
+			n = string(r[:40])
 		}
 		s.Scenarios = append(s.Scenarios, Scenario{n, g})
 	}
@@ -488,7 +494,13 @@ func (c *C) handleCalcSave(w http.ResponseWriter, r *http.Request) {
 		if n == "" {
 			n = "Ticket"
 		}
-		s.Tiers = append(s.Tiers, Tier{n, math.Max(0, parseNum(tp[i])), math.Max(0, parseNum(ts[i]))})
+		if len(s.Tiers) >= 12 {
+			break
+		}
+		if r := []rune(n); len(r) > 40 {
+			n = string(r[:40])
+		}
+		s.Tiers = append(s.Tiers, Tier{n, math.Min(100000, math.Max(0, parseNum(tp[i]))), math.Min(1000, math.Max(0, parseNum(ts[i])))})
 	}
 	s.Baseline = int(parseNum(r.FormValue("baseline")))
 	s.VAT = math.Max(0, parseNum(r.FormValue("vat")))

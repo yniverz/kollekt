@@ -24,6 +24,7 @@ func (a *App) routes() {
 		_, _ = w.Write([]byte("ok"))
 	})
 
+	mux.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	mux.HandleFunc("GET /login", a.public(a.loginPage))
 	mux.HandleFunc("POST /login", a.public(a.loginPost))
 	mux.HandleFunc("GET /setup", a.public(a.setupPage))
@@ -122,6 +123,10 @@ func (a *App) routes() {
 
 func cacheStatic(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "" || strings.HasSuffix(r.URL.Path, "/") { // no directory listings
+			http.NotFound(w, r)
+			return
+		}
 		w.Header().Set("Cache-Control", "public, max-age=3600")
 		h.ServeHTTP(w, r)
 	})
@@ -130,7 +135,7 @@ func cacheStatic(h http.Handler) http.Handler {
 // ---------- auth pages ----------
 
 func safeNext(n string) string {
-	if n == "" || !strings.HasPrefix(n, "/") || strings.HasPrefix(n, "//") || strings.Contains(n, "\\") {
+	if !safeLocal(n) {
 		return "/"
 	}
 	return n

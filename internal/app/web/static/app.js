@@ -69,6 +69,10 @@
         .then(function (r) { el.disabled = false; if (!r.ok) location.reload(); else if (el.hasAttribute('data-reload')) location.reload(); });
     }
     if (el.matches('[data-autosubmit]')) { el.form.submit(); }
+    if (el.matches('input[type=file]')) { // fail early instead of a dropped connection on huge uploads
+      var big = Array.prototype.some.call(el.files || [], function (f) { return f.size > 25 * 1024 * 1024; });
+      if (big) { alert('Eine der Dateien ist größer als 25 MB und kann nicht hochgeladen werden.'); el.value = ''; }
+    }
   });
 
   document.addEventListener('focusin', function (e) { if (e.target.matches('[data-selectall]')) e.target.select(); });

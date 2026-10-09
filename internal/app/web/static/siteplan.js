@@ -72,9 +72,9 @@
     if (g.t === 'point') {
       lay = L.marker(toLL(g.p[0]), { icon: L.divIcon({ className: 'sp-pin-wrap', html: labelEl(it), iconSize: null, iconAnchor: [8, 8] }), keyboard: false });
     } else if (g.t === 'poly') {
-      lay = L.polygon(g.p.map(toLL), styleFor(it, false)); lay.bindTooltip(it.title, { permanent: true, direction: 'center', className: 'sp-label' });
+      lay = L.polygon(g.p.map(toLL), styleFor(it, false)); lay.bindTooltip(el('span', null, it.title), { permanent: true, direction: 'center', className: 'sp-label' });
     } else {
-      lay = L.polyline(g.p.map(toLL), styleFor(it, false)); lay.bindTooltip(it.title, { permanent: true, direction: 'center', className: 'sp-label' });
+      lay = L.polyline(g.p.map(toLL), styleFor(it, false)); lay.bindTooltip(el('span', null, it.title), { permanent: true, direction: 'center', className: 'sp-label' });
     }
     lay.on('click', function (e) { if (tool === 'select') { L.DomEvent.stopPropagation(e); select(it.id); } });
     lay.addTo(map); layers[it.id] = lay;

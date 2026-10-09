@@ -5,6 +5,7 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"database/sql"
 	"embed"
@@ -14,10 +15,13 @@ import (
 	"io/fs"
 	"log"
 	"math"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -92,18 +96,40 @@ func Run(cfg Config) error {
 	}
 	a.routes()
 	go a.gcSessions()
+	ln, err := net.Listen("tcp", cfg.Addr)
+	if err != nil {
+		return err
+	}
 	log.Printf("Kollekt läuft auf %s (Daten: %s)", cfg.Addr, cfg.DataDir)
 	srv := &http.Server{
-		Addr: cfg.Addr, Handler: secureHeaders(a.mux),
-		ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second,
-		WriteTimeout: 60 * time.Second, IdleTimeout: 120 * time.Second,
+		Handler:           secureHeaders(a.mux),
+		ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 60 * time.Second,
+		WriteTimeout: 90 * time.Second, IdleTimeout: 120 * time.Second,
 	}
-	return srv.ListenAndServe()
+	// finish running requests and close the database cleanly on docker stop / Ctrl-C
+	done := make(chan struct{})
+	go func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+		<-sig
+		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(ctx)
+		close(done)
+	}()
+	if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
+		return err
+	}
+	<-done
+	_ = db.Close()
+	log.Printf("Kollekt beendet.")
+	return nil
 }
 
 func (a *App) gcSessions() {
 	for {
 		_, _ = a.db.Exec("DELETE FROM sessions WHERE expires_at<?", time.Now().Unix())
+		loginThrottle.gc(10 * time.Minute)
 		time.Sleep(time.Hour)
 	}
 }
@@ -272,17 +298,17 @@ func dict(kv ...any) map[string]any {
 // ---------- request context ----------
 
 type C struct {
-	A     *App
-	W     http.ResponseWriter
-	R     *http.Request
-	Sess  *Session
-	User  *User
-	Event *Event
-	Mem   *Member
-	cache map[string][]*Rec
-	refs  map[string]map[int64]string
-	flash string
-	fin   *bool
+	A              *App
+	W              http.ResponseWriter
+	R              *http.Request
+	Sess           *Session
+	User           *User
+	Event          *Event
+	Mem            *Member
+	cache          map[string][]*Rec
+	geoDone, geoOK bool
+	geoLat, geoLng float64
+	refs           map[string]map[int64]string
 }
 
 func (c *C) Level(perm string) int {
@@ -530,7 +556,15 @@ func (a *App) newC(w http.ResponseWriter, r *http.Request) *C {
 	return c
 }
 
+// sameOrigin is a second line of defence next to the CSRF token. Browsers announce the relationship
+// themselves (Sec-Fetch-Site), which keeps working behind proxies that rewrite the Host header.
 func sameOrigin(r *http.Request) bool {
+	switch r.Header.Get("Sec-Fetch-Site") {
+	case "same-origin":
+		return true
+	case "cross-site", "same-site":
+		return false
+	}
 	o := r.Header.Get("Origin")
 	if o == "" {
 		return true
@@ -539,11 +573,13 @@ func sameOrigin(r *http.Request) bool {
 	if err != nil {
 		return false
 	}
-	host := r.Header.Get("X-Forwarded-Host")
-	if host == "" {
-		host = r.Host
+	if u.Host == r.Host {
+		return true
 	}
-	return u.Host == host
+	if fh := r.Header.Get("X-Forwarded-Host"); fh != "" && u.Host == fh {
+		return true
+	}
+	return false
 }
 
 const maxBody = 1 << 20
@@ -636,10 +672,19 @@ func pathInt(r *http.Request, name string) int64 {
 	return n
 }
 
+// safeLocal reports whether s is a same-site path (no scheme, no protocol-relative URL, no backslash tricks).
+func safeLocal(s string) bool {
+	return s != "" && strings.HasPrefix(s, "/") && !strings.HasPrefix(s, "//") && !strings.ContainsAny(s, "\\\r\n\t")
+}
+
+// back redirects to the "next" form value, or to def, but never to anything that is not a local path.
 func (c *C) back(def string) {
 	to := c.R.FormValue("next")
-	if to == "" || !strings.HasPrefix(to, "/") || strings.HasPrefix(to, "//") {
+	if !safeLocal(to) {
 		to = def
+	}
+	if !safeLocal(to) {
+		to = "/"
 	}
 	c.Redirect(to)
 }

@@ -337,3 +337,8 @@ details.d > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 
 .side-sec { font-size: 11.5px; font-weight: 600; color: var(--ink-3); margin: 14px 8px 3px; letter-spacing: .02em; }
 @media (max-width: 860px) { .side-sec { display: none; } }
+
+/* long unbroken strings must not break layouts */
+.main { overflow-wrap: break-word; }
+.panel h2, .kpi .v, .tbl td.title, .acard h3, .sp-row span { overflow-wrap: anywhere; }
+.grid2 > *, .cols-2-1 > *, .cards > *, .kpis > * { min-width: 0; }

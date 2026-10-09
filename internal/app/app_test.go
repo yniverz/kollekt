@@ -5,6 +5,8 @@ package app
 
 import (
 	"math"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -502,6 +504,70 @@ func TestChecklistTemplateRoundTrip(t *testing.T) {
 	got := a.recs(e2.ID, "checklists")
 	if len(got) != 1 || got[0].S("status") != "open" {
 		t.Fatalf("checklist not reset in template copy: %+v", got)
+	}
+}
+
+func TestSafeLocalBlocksOpenRedirects(t *testing.T) {
+	for _, ok := range []string{"/", "/e/1/m/tasks", "/e/1/m/tasks?f_status=open&q=a"} {
+		if !safeLocal(ok) {
+			t.Errorf("%q should be allowed", ok)
+		}
+	}
+	for _, bad := range []string{"", "//evil.example", "/\\evil.example", "https://evil.example", "evil", "/a\r\nSet-Cookie: x=1", "/a\tb"} {
+		if safeLocal(bad) {
+			t.Errorf("%q must be rejected", bad)
+		}
+	}
+	if safeNext("/\\evil.example") != "/" {
+		t.Error("safeNext must fall back to /")
+	}
+}
+
+func TestHexColorValidation(t *testing.T) {
+	for _, ok := range []string{"#000000", "#1a2B3c"} {
+		if !validHexColor(ok) {
+			t.Errorf("%q should be valid", ok)
+		}
+	}
+	for _, bad := range []string{"", "red", "#12345", "#12345g", "red;position:fixed", "#1234567", "url(x)"} {
+		if validHexColor(bad) {
+			t.Errorf("%q must be invalid", bad)
+		}
+	}
+}
+
+func TestTextLengthLimits(t *testing.T) {
+	if maxLen(TText) != 300 || maxLen(TTextarea) != 20000 || maxLen(TMoney) != 0 {
+		t.Fatal("unexpected limits")
+	}
+}
+
+func TestSameOriginBehindProxies(t *testing.T) {
+	mk := func(host string, h map[string]string) *http.Request {
+		r := httptest.NewRequest("POST", "http://"+host+"/x", nil)
+		r.Host = host
+		for k, v := range h {
+			r.Header.Set(k, v)
+		}
+		return r
+	}
+	cases := []struct {
+		name string
+		r    *http.Request
+		want bool
+	}{
+		{"no origin (non-browser)", mk("kollekt:8080", nil), true},
+		{"same host", mk("a.example", map[string]string{"Origin": "https://a.example"}), true},
+		{"proxy rewrites host but browser says same-origin", mk("kollekt:8080", map[string]string{"Origin": "https://a.example", "Sec-Fetch-Site": "same-origin"}), true},
+		{"proxy sets forwarded host", mk("kollekt:8080", map[string]string{"Origin": "https://a.example", "X-Forwarded-Host": "a.example"}), true},
+		{"other site", mk("a.example", map[string]string{"Origin": "https://evil.example"}), false},
+		{"browser says cross-site", mk("a.example", map[string]string{"Origin": "https://a.example", "Sec-Fetch-Site": "cross-site"}), false},
+		{"origin differs without hints", mk("kollekt:8080", map[string]string{"Origin": "https://a.example"}), false},
+	}
+	for _, c := range cases {
+		if got := sameOrigin(c.r); got != c.want {
+			t.Errorf("%s: got %v want %v", c.name, got, c.want)
+		}
 	}
 }
 

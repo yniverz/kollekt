@@ -248,6 +248,18 @@ func (t *throttle) allow(key string, max int, window time.Duration) bool {
 	return len(keep) < max
 }
 
+// gc drops keys without recent attempts so random usernames cannot grow the map forever.
+func (t *throttle) gc(window time.Duration) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	now := time.Now()
+	for k, v := range t.m {
+		if len(v) == 0 || now.Sub(v[len(v)-1]) > window {
+			delete(t.m, k)
+		}
+	}
+}
+
 func (t *throttle) hit(key string) {
 	t.mu.Lock()
 	t.m[key] = append(t.m[key], time.Now())

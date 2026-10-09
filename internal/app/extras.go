@@ -6,7 +6,6 @@ package app
 import (
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -423,17 +422,4 @@ func plural(n int, one, many string) string {
 		return fmt.Sprintf("%d %s", n, one)
 	}
 	return fmt.Sprintf("%d %s", n, many)
-}
-
-func initials(s string) string {
-	f := strings.Fields(s)
-	if len(f) == 0 {
-		return "?"
-	}
-	r := []rune(f[0])
-	out := string(r[0])
-	if len(f) > 1 {
-		out += string([]rune(f[len(f)-1])[0])
-	}
-	return strings.ToUpper(out)
 }
