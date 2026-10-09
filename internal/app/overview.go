@@ -353,9 +353,36 @@ func (c *C) handleOverview(w http.ResponseWriter, r *http.Request) {
 	}
 	v.Pin = c.eventPin()
 	v.DaysText = e.daysSummary()
-	v.Audit = c.A.recentAudit(e.ID, 10)
+	v.Audit = c.visibleAudit(c.A.recentAudit(e.ID, 60), 10)
 	v.Team = c.A.members(e.ID)
 	c.Page("overview.html", map[string]any{"Title": e.Name, "Nav": c.eventNav("overview"), "V": v, "EStatus": e.Status, "Weather": !weatherOff && e.Start != ""})
+}
+
+// visibleAudit keeps only changes in modules the person may see; area-restricted roles only see
+// changes recorded for their own areas.
+func (c *C) visibleAudit(rows []AuditRow, limit int) []AuditRow {
+	var out []AuditRow
+	for _, r := range rows {
+		ok := false
+		switch r.Module {
+		case "event", "team":
+			ok = c.Level("settings") >= 1
+		default:
+			if m := modByKey[r.Module]; m != nil {
+				ok = c.Level(m.PermKey()) >= 1 && (m.Core || c.Event.Has(m.PermKey()) || c.Event.Has(m.Key))
+				if ok && c.scoped() && m.AreaField != "" {
+					ok = r.Area != 0 && c.Mem.InArea(r.Area)
+				}
+			}
+		}
+		if ok {
+			out = append(out, r)
+			if len(out) == limit {
+				break
+			}
+		}
+	}
+	return out
 }
 
 func (c *C) sub(e *Event) *C {

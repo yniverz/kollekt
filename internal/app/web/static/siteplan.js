@@ -340,12 +340,15 @@
     });
     document.querySelectorAll('[data-sptool]').forEach(function (b) { b.onclick = function () { setTool(b.getAttribute('data-sptool')); }; });
     var kindSel = document.getElementById('sp-kind');
-    D.kinds.forEach(function (k) { option(kindSel, k.key, k.label, 'zone'); });
-    kindSel.onchange = function () { var k = kindOf(kindSel.value); if (k.shape === 'point') setTool('point'); else if (k.shape === 'line') setTool('line'); else if (tool === 'point' || tool === 'line') setTool('poly'); };
-    var editableAreas = D.areas.filter(function (a) { return a.editable; });
-    option(drawArea, 0, 'Ohne Bereich', 0);
-    editableAreas.forEach(function (a) { option(drawArea, a.id, a.name, editableAreas[0].id); });
-    if (editableAreas.length) drawArea.value = editableAreas[0].id;
+    if (kindSel && drawArea) { // the drawing toolbar only exists for people who may edit
+      D.kinds.forEach(function (k) { option(kindSel, k.key, k.label, 'zone'); });
+      kindSel.onchange = function () { var k = kindOf(kindSel.value); if (k.shape === 'point') setTool('point'); else if (k.shape === 'line') setTool('line'); else if (tool === 'point' || tool === 'line') setTool('poly'); };
+      var editableAreas = D.areas.filter(function (a) { return a.editable; });
+      option(drawArea, 0, 'Ohne Bereich', 0);
+      editableAreas.forEach(function (a) { option(drawArea, a.id, a.name, editableAreas[0].id); });
+      if (editableAreas.length) drawArea.value = editableAreas[0].id;
+
+    }
     var saveView = document.getElementById('sp-saveview');
     if (saveView) saveView.onclick = function () {
       var c = map.getCenter();

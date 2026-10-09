@@ -962,7 +962,11 @@ func (c *C) audit(m *Module, r *Rec, action string) {
 	if m.Global || c.Event == nil || r == nil {
 		return
 	}
-	c.A.logAudit(c.User.ID, c.Event.ID, m.Key, r.ID, action, c.A.recTitle(c, m, r))
+	var area int64
+	if m.AreaField != "" {
+		area = r.I(m.AreaField)
+	}
+	c.A.logAudit(c.User.ID, c.Event.ID, m.Key, r.ID, action, c.A.recTitle(c, m, r), area)
 }
 
 func (c *C) handleDelete(w http.ResponseWriter, r *http.Request) {
@@ -982,7 +986,11 @@ func (c *C) handleDelete(w http.ResponseWriter, r *http.Request) {
 	title := c.A.recTitle(c, m, rec)
 	c.A.delRec(rec.ID)
 	if !m.Global {
-		c.A.logAudit(c.User.ID, c.Event.ID, m.Key, rec.ID, "gelöscht", title)
+		var area int64
+		if m.AreaField != "" {
+			area = rec.I(m.AreaField)
+		}
+		c.A.logAudit(c.User.ID, c.Event.ID, m.Key, rec.ID, "gelöscht", title, area)
 	}
 	c.setFlash("„" + title + "“ gelöscht.")
 	next := r.FormValue("next")

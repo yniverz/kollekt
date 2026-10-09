@@ -155,6 +155,7 @@ type PowerView struct {
 	Next      string
 	CanEdit   bool
 	HasSource bool
+	Scoped    bool
 	Reserve   float64
 	WarnPct   float64
 	Cos       float64
@@ -217,15 +218,24 @@ func (c *C) powerTree() *PowerView {
 		}
 		return t
 	}
-	v := &PowerView{Base: c.modBase(modByKey["power"]), Next: fmt.Sprintf("/e/%d/m/power", c.Event.ID), CanEdit: c.canEditModule(modByKey["power"])}
+	v := &PowerView{Scoped: c.scoped(), Base: c.modBase(modByKey["power"]), Next: fmt.Sprintf("/e/%d/m/power", c.Event.ID), CanEdit: c.canEditModule(modByKey["power"])}
 	kindOpts := modByKey["power"].Field("kind").Opts
 	seen := map[int64]bool{}
+	pm := modByKey["power"]
 	var walk func(r *Rec, level int)
 	walk = func(r *Rec, level int) {
 		if seen[r.ID] || level > 12 {
 			return
 		}
 		seen[r.ID] = true
+		shown := c.visible(pm, r) // restricted roles only get their own area's posts, sums still use everything below
+		if !shown {
+			kids := children[r.ID]
+			for _, ch := range kids {
+				walk(ch, level)
+			}
+			return
+		}
 		row := &PowerRow{R: r, Level: level, Pad: level * 22, Kind: r.S("kind"), Load: loadOf(r, 0), Own: r.N("watts")}
 		row.KindLabel, _ = optLabel(kindOpts, r.S("kind"))
 		row.Chained = (row.Kind == "load" || row.Kind == "") && row.Load > own(r)+0.001

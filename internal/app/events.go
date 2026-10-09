@@ -260,8 +260,22 @@ func (a *App) eventDuplicate(c *C) {
 		return
 	}
 	a.instantiate(e, p, c.User.ID)
+	newAreaByName := map[string]int64{}
+	for _, ar := range a.recs(e.ID, "areas") {
+		newAreaByName[ar.S("name")] = ar.ID
+	}
+	oldName := map[int64]string{}
+	for _, ar := range a.recs(src.ID, "areas") {
+		oldName[ar.ID] = ar.S("name")
+	}
 	for _, m := range a.members(src.ID) {
-		a.setMember(e.ID, m.UserID, m.RoleID, nil)
+		var areas []int64
+		for _, id := range m.Areas {
+			if nid, ok := newAreaByName[oldName[id]]; ok {
+				areas = append(areas, nid)
+			}
+		}
+		a.setMember(e.ID, m.UserID, m.RoleID, areas)
 	}
 	for _, rl := range a.roles() {
 		if rl.Name == "Orga-Leitung" && a.member(e.ID, c.User.ID) == nil {

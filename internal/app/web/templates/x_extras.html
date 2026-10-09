@@ -120,10 +120,10 @@
 
 {{define "x_power"}}{{$p := .Extra}}
 {{if $p.Rows}}
-<div class="kpis">
+{{if not $p.Scoped}}<div class="kpis">
   <div class="kpi"><div class="l">Gesamtlast</div><div class="v">{{num (div1000 $p.Total)}} kW</div><div class="s">alle Verbraucher, mit Gleichzeitigkeit</div></div>
   <div class="kpi"><div class="l">Benötigte Einspeisung</div><div class="v">{{num (div1000 $p.Needed)}} kW</div><div class="s">inkl. {{num $p.Reserve}} % Reserve, ≈ {{num $p.KVA}} kVA</div></div>
-</div>
+</div>{{end}}
 {{range $p.Warns}}<div class="errbox">{{.}}</div>{{end}}
 <div class="tblwrap"><table class="tbl">
   <thead><tr><th>Bezeichnung</th><th>Art</th><th class="num">Leistung</th><th class="num">Last</th><th class="num">Strom</th><th style="width:22%">Auslastung</th><th></th></tr></thead>

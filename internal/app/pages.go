@@ -148,7 +148,7 @@ func (c *C) handleRetro(w http.ResponseWriter, r *http.Request) {
 		if e.ID == c.Event.ID {
 			continue
 		}
-		if !c.User.IsAdmin && c.A.member(e.ID, c.User.ID) == nil {
+		if s := c.sub(e); !c.User.IsAdmin && (s.Mem == nil || !e.Has("retro") || s.Level("retro") < 1) {
 			continue
 		}
 		var n RetroNotes

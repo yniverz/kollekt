@@ -443,7 +443,7 @@ func (c *C) handleSiteItemSave(w http.ResponseWriter, r *http.Request) {
 	if in.ID == 0 {
 		act = "angelegt"
 	}
-	c.A.logAudit(c.User.ID, c.Event.ID, "site_items", rec.ID, "Lageplan "+act, title)
+	c.A.logAudit(c.User.ID, c.Event.ID, "site_items", rec.ID, "Lageplan "+act, title, area)
 	colors := map[int64]string{}
 	for _, a := range c.Recs("areas") {
 		colors[a.ID] = a.S("color")
@@ -467,7 +467,7 @@ func (c *C) handleSiteItemDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	title := rec.S("title")
 	c.A.delRec(rec.ID)
-	c.A.logAudit(c.User.ID, c.Event.ID, "site_items", rec.ID, "Lageplan gelöscht", title)
+	c.A.logAudit(c.User.ID, c.Event.ID, "site_items", rec.ID, "Lageplan gelöscht", title, rec.I("area"))
 	jsonOut(w, 200, map[string]bool{"ok": true})
 }
 

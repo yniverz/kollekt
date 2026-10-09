@@ -173,7 +173,7 @@ func (c *C) icsFeed() string {
 			desc += " · " + en.Status
 		}
 		desc += "\n" + c.Event.Name
-		o.event(en.Module+"-"+itoa(en.ID)+"-"+en.Raw, en.Label+": "+strings.TrimPrefix(strings.TrimPrefix(en.Title, "Abholen: "), "Zurückgeben: "), desc, en.When, en.AllDay, time.Time{}, en.Kind != "gear")
+		o.event(en.Module+"-"+itoa(en.ID)+"-"+en.Raw, en.Label+": "+strings.TrimPrefix(strings.TrimPrefix(en.Name, "Abholen: "), "Zurückgeben: "), desc, en.When, en.AllDay, time.Time{}, en.Kind != "gear")
 	}
 	if c.can("lineup") {
 		for _, r := range c.Recs("lineup") {

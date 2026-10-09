@@ -6,7 +6,9 @@ package app
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"database/sql"
 	"embed"
 	"encoding/hex"
@@ -21,6 +23,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -104,6 +107,7 @@ func Run(cfg Config) error {
 	}
 	a.seed()
 	a.bootstrapAdmin()
+	a.initSetupCode()
 	if env("KOLLEKT_DEMO_DATA", "") == "1" {
 		a.seedDemo()
 	}
@@ -763,4 +767,50 @@ func secureHeaders(next http.Handler) http.Handler {
 		h.Set("Content-Security-Policy", csp)
 		next.ServeHTTP(w, r)
 	})
+}
+
+var (
+	setupMu   sync.Mutex
+	setupCode string
+)
+
+// initSetupCode protects a fresh installation: whoever reaches the setup page first would otherwise
+// become administrator. The code is printed to the container log, which only the operator can read.
+func (a *App) initSetupCode() {
+	if a.userCount() > 0 {
+		return
+	}
+	const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+	b := make([]byte, 12)
+	_, _ = rand.Read(b)
+	var sb strings.Builder
+	for i, x := range b {
+		if i > 0 && i%4 == 0 {
+			sb.WriteByte('-')
+		}
+		sb.WriteByte(alphabet[int(x)%len(alphabet)])
+	}
+	setupMu.Lock()
+	setupCode = sb.String()
+	setupMu.Unlock()
+	log.Printf("Einrichtung: Öffne die Seite und gib diesen Einrichtungscode ein: %s", sb.String())
+}
+
+func setupCodeRequired() bool {
+	setupMu.Lock()
+	defer setupMu.Unlock()
+	return setupCode != ""
+}
+
+func checkSetupCode(in string) bool {
+	setupMu.Lock()
+	defer setupMu.Unlock()
+	norm := strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(in), " ", ""))
+	return setupCode != "" && subtle.ConstantTimeCompare([]byte(norm), []byte(setupCode)) == 1
+}
+
+func clearSetupCode() {
+	setupMu.Lock()
+	setupCode = ""
+	setupMu.Unlock()
 }

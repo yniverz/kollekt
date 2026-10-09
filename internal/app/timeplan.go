@@ -20,6 +20,7 @@ type TEntry struct {
 	Label   string
 	Color   string
 	Title   string
+	Name    string // title without amounts, safe for calendars
 	Area    string
 	Who     string
 	Status  string
@@ -70,7 +71,7 @@ func (c *C) timeEntries() ([]*TEntry, []UndatedItem) {
 			return
 		}
 		m := modByKey[mod]
-		en := &TEntry{Raw: rawDate, When: t, AllDay: len(rawDate) <= 10, Kind: kind, Label: label, Color: color, Title: title,
+		en := &TEntry{Raw: rawDate, When: t, AllDay: len(rawDate) <= 10, Kind: kind, Label: label, Color: color, Title: title, Name: title,
 			Area: c.RefTitle("areas", area), Who: c.RefTitle("contacts", who), Status: status, Module: mod, ID: r.ID,
 			CanEdit: c.canEditModule(m), ListURL: c.modListURL(m)}
 		en.EditURL = fmt.Sprintf("%s/%d?next=%s", c.modBase(m), r.ID, "/e/"+itoa(e.ID)+"/zeitplan")
@@ -127,6 +128,7 @@ func (c *C) timeEntries() ([]*TEntry, []UndatedItem) {
 				continue // most planned lines have no payment date, do not nag
 			}
 			add("budget", "pay", "Zahlung", "orange", t, r.S("due"), r, r.I("vendor"), r.I("area"), "contacts", statusLabel("budget", "status", r.S("status")))
+			out[len(out)-1].Name = r.S("title")
 		}
 	}
 	if c.can("equipment") {

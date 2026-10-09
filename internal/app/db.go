@@ -124,6 +124,14 @@ func openDB(dir string) (*sql.DB, error) {
 	if _, err := db.Exec(schemaSQL); err != nil {
 		return nil, fmt.Errorf("schema: %w", err)
 	}
+	// columns added after the first release
+	var n int
+	_ = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('audit') WHERE name='area_id'").Scan(&n)
+	if n == 0 {
+		if _, err := db.Exec("ALTER TABLE audit ADD COLUMN area_id INTEGER NOT NULL DEFAULT 0"); err != nil {
+			return nil, fmt.Errorf("migration audit.area_id: %w", err)
+		}
+	}
 	for _, suffix := range []string{"", "-wal", "-shm"} {
 		_ = os.Chmod(path+suffix, 0o600) // data is private: owner only
 	}
@@ -224,9 +232,14 @@ func (a *App) delRec(id int64) {
 	_, _ = a.db.Exec("DELETE FROM records WHERE id=?", id)
 }
 
-func (a *App) logAudit(userID, eventID int64, module string, recID int64, action, title string) {
-	_, _ = a.db.Exec("INSERT INTO audit(ts,user_id,event_id,module,rec_id,action,title) VALUES(?,?,?,?,?,?,?)",
-		time.Now().Unix(), userID, eventID, module, recID, action, title)
+// logAudit records a change. The optional area lets restricted roles see changes in their own area only.
+func (a *App) logAudit(userID, eventID int64, module string, recID int64, action, title string, area ...int64) {
+	var ar int64
+	if len(area) > 0 {
+		ar = area[0]
+	}
+	_, _ = a.db.Exec("INSERT INTO audit(ts,user_id,event_id,module,rec_id,action,title,area_id) VALUES(?,?,?,?,?,?,?,?)",
+		time.Now().Unix(), userID, eventID, module, recID, action, title, ar)
 }
 
 type AuditRow struct {
@@ -236,10 +249,11 @@ type AuditRow struct {
 	Action string
 	Title  string
 	RecID  int64
+	Area   int64
 }
 
 func (a *App) recentAudit(eventID int64, limit int) []AuditRow {
-	rows, err := a.db.Query(`SELECT a.ts, COALESCE(u.name,'?'), a.module, a.action, a.title, a.rec_id
+	rows, err := a.db.Query(`SELECT a.ts, COALESCE(u.name,'?'), a.module, a.action, a.title, a.rec_id, a.area_id
 		FROM audit a LEFT JOIN users u ON u.id=a.user_id WHERE a.event_id=? ORDER BY a.id DESC LIMIT ?`, eventID, limit)
 	if err != nil {
 		return nil
@@ -249,7 +263,7 @@ func (a *App) recentAudit(eventID int64, limit int) []AuditRow {
 	for rows.Next() {
 		var r AuditRow
 		var ts int64
-		if rows.Scan(&ts, &r.User, &r.Module, &r.Action, &r.Title, &r.RecID) == nil {
+		if rows.Scan(&ts, &r.User, &r.Module, &r.Action, &r.Title, &r.RecID, &r.Area) == nil {
 			r.TS = time.Unix(ts, 0)
 			out = append(out, r)
 		}

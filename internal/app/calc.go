@@ -238,6 +238,9 @@ func (c *C) finance(G int) *Finance {
 				l.Actual, l.HasActual = c.amt(r.N("actual"), r, false), true
 			}
 			l.Paid = r.S("status") == "paid"
+			if l.Paid && !l.HasActual { // marked paid without an actual amount: the plan was paid
+				l.Actual, l.HasActual = l.Plan, true
+			}
 			f.Lines = append(f.Lines, l)
 		}
 	}

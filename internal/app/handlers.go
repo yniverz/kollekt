@@ -185,7 +185,7 @@ func (a *App) setupPage(c *C) {
 		c.Redirect("/login")
 		return
 	}
-	c.renderTpl("setup.html", map[string]any{"Title": "Einrichtung"})
+	c.renderTpl("setup.html", map[string]any{"Title": "Einrichtung", "NeedCode": setupCodeRequired()})
 }
 
 func (a *App) setupPost(c *C) {
@@ -197,7 +197,20 @@ func (a *App) setupPost(c *C) {
 	name, user, pw := strings.TrimSpace(r.FormValue("name")), strings.TrimSpace(r.FormValue("username")), r.FormValue("password")
 	fail := func(msg string) {
 		c.W.WriteHeader(422)
-		c.renderTpl("setup.html", map[string]any{"Title": "Einrichtung", "Error": msg, "Name": name, "Username": user})
+		c.renderTpl("setup.html", map[string]any{"Title": "Einrichtung", "Error": msg, "Name": name, "Username": user, "NeedCode": setupCodeRequired()})
+	}
+	if setupCodeRequired() {
+		key := "setup|" + clientIP(r)
+		if !loginThrottle.allow(key, 10, 10*time.Minute) {
+			c.W.WriteHeader(http.StatusTooManyRequests)
+			c.renderTpl("setup.html", map[string]any{"Title": "Einrichtung", "Error": "Zu viele Versuche. Bitte in ein paar Minuten erneut probieren.", "NeedCode": true})
+			return
+		}
+		if !checkSetupCode(r.FormValue("code")) {
+			loginThrottle.hit(key)
+			fail("Der Einrichtungscode stimmt nicht. Du findest ihn im Log des Containers (in Portainer: Container → Logs).")
+			return
+		}
 	}
 	if name == "" || user == "" {
 		fail("Name und Benutzername sind Pflicht.")
@@ -216,6 +229,7 @@ func (a *App) setupPost(c *C) {
 		fail("Konto konnte nicht angelegt werden.")
 		return
 	}
+	clearSetupCode()
 	tok, _ := a.newSession(u.ID)
 	a.setCookie(c.W, r, tok, 30*24*3600)
 	c.Redirect("/")

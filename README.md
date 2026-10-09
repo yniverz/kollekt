@@ -50,7 +50,7 @@ Die Übersicht jedes Events zeigt Kennzahlen, Warnungen (überfällige Aufgaben,
 docker compose up -d --build
 ```
 
-Danach `http://localhost:8080` öffnen. Beim ersten Aufruf erscheint die Einrichtung für das Admin-Konto. Alternativ legen die Variablen `KOLLEKT_ADMIN_USER` und `KOLLEKT_ADMIN_PASSWORD` das Konto beim ersten Start an.
+Danach `http://localhost:8080` öffnen. Beim ersten Aufruf erscheint die Einrichtung für das Admin-Konto. Sie verlangt einen **Einrichtungscode**, den Kollekt beim Start ins Container-Log schreibt (Portainer: Container → Logs, Zeile „Einrichtung: …“). So kann niemand das Admin-Konto übernehmen, der die Seite nur zufällig erreicht. Alternativ legen die Variablen `KOLLEKT_ADMIN_USER` und `KOLLEKT_ADMIN_PASSWORD` das Konto beim ersten Start an.
 
 **Portainer, Variante A (baut selbst, funktioniert sofort):** Stacks → Add stack → *Repository*, URL `https://github.com/yniverz/kollekt`, Reference `refs/heads/main`, Compose-Pfad `docker-compose.yml`. Das Repo ist öffentlich, ein Token ist nicht nötig. Portainer baut das Image dabei selbst. Zum Aktualisieren „Pull and redeploy“ nutzen und die Option *Re-pull image* ausgeschaltet lassen, es gibt nichts zu ziehen. Sonst meldet Docker „pull access denied for kollekt“.
 
