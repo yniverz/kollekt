@@ -712,3 +712,48 @@ func TestFormsSurviveHostileInput(t *testing.T) {
 		t.Fatalf("only %d requests sent", n)
 	}
 }
+
+// Contacts, locations and articles are shared master data: everybody reads, editing needs the flag.
+func TestMasterDataEditingNeedsTheFlag(t *testing.T) {
+	f := newFixture(t)
+	for _, name := range []string{"nur_lesen", "darf_stamm"} {
+		if _, err := f.a.createUser(name, name, "rolepassword-123", false, false, name == "darf_stamm"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	loc := &Rec{Module: "locations", D: map[string]string{"name": "Alte Ziegelei"}}
+	_ = f.a.saveRec(loc)
+	for _, mod := range []string{"locations", "contacts", "articles"} {
+		reader := f.client("nur_lesen", "rolepassword-123")
+		writer := f.client("darf_stamm", "rolepassword-123")
+		if got := reader.status("GET", "/g/"+mod, nil); got != 200 {
+			t.Errorf("reader GET /g/%s = %d, want 200", mod, got)
+		}
+		if got := reader.status("POST", "/g/"+mod+"/new", url.Values{"name": {"X"}, "content": {"1"}, "price": {"1"}}); got != 403 {
+			t.Errorf("reader POST /g/%s/new = %d, want 403", mod, got)
+		}
+		if got := writer.status("POST", "/g/"+mod+"/new", url.Values{"name": {"Neu " + mod}, "content": {"1"}, "price": {"1"}}); got != 303 {
+			t.Errorf("flagged user POST /g/%s/new = %d, want 303", mod, got)
+		}
+	}
+	reader := f.client("nur_lesen", "rolepassword-123")
+	if got := reader.status("POST", fmt.Sprintf("/g/locations/%d", loc.ID), url.Values{"name": {"Gehackt"}}); got != 403 {
+		t.Errorf("reader edit location = %d, want 403", got)
+	}
+	if got := reader.status("POST", fmt.Sprintf("/g/locations/%d/delete", loc.ID), nil); got != 403 {
+		t.Errorf("reader delete location = %d, want 403", got)
+	}
+	if f.a.rec(loc.ID).D["name"] != "Alte Ziegelei" {
+		t.Error("a read-only user changed a location")
+	}
+	if body := reader.getBody("/g/locations"); strings.Contains(body, "hinzufügen") {
+		t.Error("reader sees an add button")
+	}
+	writer := f.client("darf_stamm", "rolepassword-123")
+	if got := writer.status("POST", fmt.Sprintf("/g/locations/%d", loc.ID), url.Values{"name": {"Umbenannt"}, "kind": {"outdoor"}}); got != 303 {
+		t.Errorf("flagged user edit location = %d, want 303", got)
+	}
+	if body := writer.getBody("/g/locations"); !strings.Contains(body, "hinzufügen") {
+		t.Error("flagged user does not see the add button")
+	}
+}
