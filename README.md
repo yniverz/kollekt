@@ -40,11 +40,12 @@ Die Übersicht jedes Events zeigt Kennzahlen, Warnungen (überfällige Aufgaben,
 
 Kollekt hat einen eingebauten MCP-Server (Model Context Protocol) unter `/mcp`. Damit können KI-Assistenten wie Claude Code Events, Fristen, Budget und Anhänge lesen und auf Wunsch Einträge anlegen oder ändern.
 
-* **Zugang pro Person:** Unter *Mein Konto → KI-Assistenten* erzeugt jede Person eigene Tokens, wahlweise *Nur lesen* oder *Lesen & Schreiben*. Der Assistent hat genau die Rechte dieser Person: Rollen, „Nur eigene Bereiche“ und „Kosten & Gagen sehen“ gelten unverändert.
-* **Einrichtung in Claude Code:** `claude mcp add --transport http kollekt https://kollekt.example.org/mcp --header "Authorization: Bearer kx_…"` (der fertige Befehl erscheint beim Erzeugen des Tokens). Mit `--scope user` gilt er in allen Projekten.
+* **Anmeldung per OAuth (empfohlen):** In Claude (Web, Desktop, Mobil) unter *Einstellungen → Konnektoren* einen eigenen Konnektor mit der Adresse `https://kollekt.example.org/mcp` hinzufügen, in Claude Code `claude mcp add --transport http kollekt https://kollekt.example.org/mcp` und danach `/mcp`. Claude öffnet die Kollekt-Anmeldung, dort entscheidet die Person über *Nur lesen* oder *Lesen & Schreiben*. Verbundene Apps stehen unter *Mein Konto* und lassen sich dort trennen. Kollekt ist dafür selbst der Autorisierungsserver (OAuth 2.1 mit PKCE, dynamische Client-Registrierung und Client-ID-Metadaten-Dokumente, rotierende Refresh-Tokens).
+* **Persönliche Tokens:** Für Programme ohne OAuth oder Skripte erzeugt jede Person unter *Mein Konto → KI-Assistenten* eigene Tokens (`claude mcp add … --header "Authorization: Bearer kx_…"`, der fertige Befehl erscheint beim Erzeugen).
+* **Rechte:** Der Assistent hat genau die Rechte der angemeldeten Person: Rollen, „Nur eigene Bereiche“ und „Kosten & Gagen sehen“ gelten unverändert.
 * **Werkzeuge:** Events und Übersicht mit Warnungen, Module und Felder, Einträge lesen und durchsuchen, Zeitplan, Finanzen, Änderungsprotokoll. Mit Schreibzugriff zusätzlich: Einträge anlegen, ändern, löschen und Aktionen ausführen. Dateien und E-Mails gehören nicht in diese Schnittstelle, sondern werden im Assistenten über eigene Dienste angebunden.
 * **Nachvollziehbar:** Änderungen über MCP stehen im Änderungsprotokoll mit dem Zusatz „(MCP)“. Tokens werden nur gehasht gespeichert, lassen sich jederzeit widerrufen und funktionieren nicht mehr, sobald das Konto deaktiviert ist.
-* Über das Internet nur mit HTTPS betreiben. Wer die Schnittstelle nicht braucht, schaltet sie mit `KOLLEKT_MCP=off` ab.
+* Über das Internet nur mit HTTPS betreiben und `KOLLEKT_PUBLIC_URL` setzen. Claude im Web erreicht Kollekt nur, wenn die Adresse öffentlich erreichbar ist; Claude Code genügt das eigene Netz. Wer die Schnittstelle nicht braucht, schaltet sie mit `KOLLEKT_MCP=off` ab.
 
 ## Rechte
 
@@ -84,7 +85,8 @@ Danach `http://localhost:8080` öffnen. Beim ersten Aufruf erscheint die Einrich
 | `KOLLEKT_SATELLITE_ATTRIBUTION` | Esri-Quellenangabe | Quellenangabe der Satellitenbilder |
 | `KOLLEKT_LABELS_URL` | Esri Beschriftung | Beschriftungs-Ebene für „Satellit mit Beschriftung“. Bei eigenem Satellitenserver leer, sofern nicht gesetzt |
 | `KOLLEKT_GEOCODER_URL` | Nominatim | Dienst für die Adresssuche |
-| `KOLLEKT_MCP` | an | `off` schaltet die MCP-Schnittstelle für KI-Assistenten und die API-Tokens ab |
+| `KOLLEKT_MCP` | an | `off` schaltet die MCP-Schnittstelle für KI-Assistenten, OAuth und die API-Tokens ab |
+| `KOLLEKT_PUBLIC_URL` | leer | Öffentliche Adresse, z. B. `https://kollekt.example.org`. Bestimmt die Adressen, die Kollekt KI-Apps bei der Anmeldung (OAuth) nennt. Leer = aus der Anfrage abgeleitet |
 | `KOLLEKT_DEMO_DATA` | leer | `1` legt in einer leeren Installation ein Demo-Event mit frei erfundenen Daten an |
 
 **Backup:** Das Volume `/data` enthält alles (`kollekt.db` und der Ordner `files/` mit den Anhängen). Im laufenden Betrieb am besten mit `sqlite3 kollekt.db ".backup backup.db"` sichern oder den Container kurz stoppen.

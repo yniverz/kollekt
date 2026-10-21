@@ -41,8 +41,18 @@ func (a *App) routes() {
 	mux.HandleFunc("POST /account/tokens", a.auth(a.tokenCreate))
 	mux.HandleFunc("POST /account/tokens/{tid}/delete", a.auth(a.tokenDelete))
 
-	// MCP (Model Context Protocol) for AI assistants, authenticated by personal API tokens
+	mux.HandleFunc("POST /account/connections/{gid}/delete", a.auth(a.grantDelete))
+
+	// MCP (Model Context Protocol) for AI assistants, authenticated by personal API tokens or OAuth
 	mux.HandleFunc("/mcp", a.mcpHandler)
+	mux.HandleFunc("/.well-known/oauth-protected-resource", cors(a.oauthProtectedResource))
+	mux.HandleFunc("/.well-known/oauth-protected-resource/mcp", cors(a.oauthProtectedResource))
+	mux.HandleFunc("/.well-known/oauth-authorization-server", cors(a.oauthServerMetadata))
+	mux.HandleFunc("/oauth/register", cors(a.oauthRegister))
+	mux.HandleFunc("/oauth/token", cors(a.oauthToken))
+	mux.HandleFunc("/oauth/revoke", cors(a.oauthRevoke))
+	mux.HandleFunc("GET /oauth/authorize", a.auth(a.oauthAuthorizePage))
+	mux.HandleFunc("POST /oauth/authorize", a.auth(a.oauthAuthorizeDecide))
 
 	// events
 	mux.HandleFunc("GET /events/new", a.auth(a.eventNew))

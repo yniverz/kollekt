@@ -1,0 +1,17 @@
+{{define "content"}}
+<div class="login" style="max-width:520px">
+  <a class="brand" href="/">Kollekt<span>.</span></a>
+  <h1 style="margin:14px 0 6px">Zugriff erlauben?</h1>
+  <p><strong>{{.Q.Client.Name}}</strong> möchte als <strong>{{.User.Name}}</strong> ({{.User.Username}}) auf Kollekt zugreifen.</p>
+  <p class="muted small">Die App sieht und ändert nur, was du selbst in Kollekt sehen und ändern darfst. Du kannst die Verbindung jederzeit unter „Mein Konto“ trennen.</p>
+  <p class="muted small">Rücksprung an: <code>{{.RedirectHost}}</code>{{if .Q.Client.Metadata}} · App-Kennung: <code>{{.Q.Client.ID}}</code>{{end}}</p>
+  {{if .Loopback}}<div class="errbox">Die Anmeldung geht an ein Programm auf diesem Computer (z. B. Claude Code). Erlaube das nur, wenn du die Verbindung gerade selbst gestartet hast.</div>{{end}}
+  <form method="post" action="/oauth/authorize">
+    <input type="hidden" name="_csrf" value="{{.CSRF}}">
+    {{range $k, $v := .Params}}{{if and (ne $k "_csrf") (ne $k "write") (ne $k "decision")}}{{range $v}}<input type="hidden" name="{{$k}}" value="{{.}}">{{end}}{{end}}{{end}}
+    {{if .Q.WantWrite}}<label class="checkrow"><input type="checkbox" name="write" value="1"> Auch ändern: Einträge anlegen, bearbeiten und löschen</label>
+    <p class="muted small">Ohne Haken darf die App nur lesen. Das reicht für Fragen, Auswertungen und Erinnerungen.</p>{{else}}<p class="muted small">Die App bittet nur um Lesezugriff.</p>{{end}}
+    <div class="form-actions"><button class="btn primary" name="decision" value="allow">Erlauben</button> <button class="btn ghost" name="decision" value="deny">Ablehnen</button></div>
+  </form>
+</div>
+{{end}}

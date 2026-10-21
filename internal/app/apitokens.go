@@ -78,7 +78,7 @@ func (a *App) accountPage(c *C) {
 }
 
 func (c *C) renderAccount(extra map[string]any) {
-	data := map[string]any{"Title": "Mein Konto", "Tokens": c.A.apiTokens(c.User.ID), "MCPOn": !mcpOff, "MCPURL": c.calBase() + "/mcp"}
+	data := map[string]any{"Title": "Mein Konto", "Tokens": c.A.apiTokens(c.User.ID), "Grants": c.A.oauthGrants(c.User.ID), "MCPOn": !mcpOff, "MCPURL": c.A.mcpResource(c.R)}
 	for k, v := range extra {
 		data[k] = v
 	}

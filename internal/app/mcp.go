@@ -95,17 +95,29 @@ func (a *App) mcpHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tok, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	tok = strings.TrimSpace(tok)
 	var u *User
 	var canWrite bool
-	if ok {
-		u, canWrite = a.apiTokenUser(strings.TrimSpace(tok))
+	switch {
+	case !ok:
+	case strings.HasPrefix(tok, oauthAccessPrefix):
+		u, canWrite = a.oauthUser(tok)
+	default:
+		u, canWrite = a.apiTokenUser(tok)
 	}
 	if u == nil {
+		// the pointer to the metadata starts the OAuth sign-in in clients such as Claude
+		hdr := fmt.Sprintf(`Bearer resource_metadata="%s", scope="read write"`, a.resourceMetadataURL(r))
 		if ok {
-			loginThrottle.hit(ip)
+			hdr += `, error="invalid_token"`
+			// expired OAuth access tokens are routine (the client refreshes them) and share the
+			// client's IP with other people, so only failed personal tokens count as guessing
+			if !strings.HasPrefix(tok, oauthAccessPrefix) {
+				loginThrottle.hit(ip)
+			}
 		}
-		w.Header().Set("WWW-Authenticate", `Bearer realm="kollekt"`)
-		mcpHTTPError(w, http.StatusUnauthorized, "Persönlicher API-Token fehlt oder ist ungültig (Kollekt → Mein Konto → KI-Assistenten).")
+		w.Header().Set("WWW-Authenticate", hdr)
+		mcpHTTPError(w, http.StatusUnauthorized, "Anmeldung fehlt oder ist abgelaufen. In Claude die Verbindung mit Kollekt herstellen oder einen persönlichen Token nutzen (Kollekt → Mein Konto → KI-Assistenten).")
 		return
 	}
 	if v := r.Header.Get("MCP-Protocol-Version"); v != "" && !mcpSupported(v) {

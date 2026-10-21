@@ -14,7 +14,19 @@
 {{if .MCPOn}}
 <div class="panel" style="max-width:720px">
   <h2>KI-Assistenten (MCP)</h2>
-  <p class="muted small">Mit einem persönlichen Token können KI-Assistenten wie Claude Code über das Model Context Protocol auf Kollekt zugreifen. Sie sehen und ändern genau das, was du hier sehen und ändern darfst. Ein Token „Nur lesen“ reicht für Fragen und Auswertungen. Gib Schreibzugriff nur, wenn der Assistent auch Einträge anlegen oder ändern soll.</p>
+  <p class="muted small">KI-Assistenten wie Claude greifen über das Model Context Protocol auf Kollekt zu. Sie sehen und ändern genau das, was du hier sehen und ändern darfst. Lesezugriff reicht für Fragen und Auswertungen. Gib Schreibzugriff nur, wenn der Assistent auch Einträge anlegen oder ändern soll.</p>
+  <h3>Verbinden mit Anmeldung (empfohlen)</h3>
+  <p class="muted small">In Claude (Web, Desktop, Mobil) unter Einstellungen → Konnektoren einen eigenen Konnektor mit dieser Adresse hinzufügen, in Claude Code mit <code>claude mcp add --transport http kollekt {{.MCPURL}}</code> und danach <code>/mcp</code>. Claude öffnet dann die Kollekt-Anmeldung, und du entscheidest dort über Lese- oder Schreibzugriff.</p>
+  <p class="muted small">Adresse: <code>{{.MCPURL}}</code></p>
+  {{if .Grants}}
+  <div class="tblwrap"><table class="tbl"><thead><tr><th>Verbundene App</th><th>Zugriff</th><th>Verbunden</th><th>Zuletzt genutzt</th><th></th></tr></thead><tbody>
+  {{range .Grants}}<tr><td class="title">{{.Client}}</td><td>{{if .CanWrite}}<span class="badge b-orange">Lesen &amp; Schreiben</span>{{else}}<span class="badge b-gray">Nur lesen</span>{{end}}</td>
+  <td>{{.Created.Format "02.01.2006"}}</td><td>{{if .LastUsed.IsZero}}<span class="muted">nie</span>{{else}}{{.LastUsed.Format "02.01.2006 15:04"}}{{end}}</td>
+  <td style="text-align:right"><form method="post" action="/account/connections/{{.ID}}/delete" style="display:inline"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="btn ghost sm" data-confirm="Verbindung trennen? Die App muss sich danach neu anmelden.">Trennen</button></form></td></tr>{{end}}
+  </tbody></table></div>
+  {{end}}
+  <h3>Persönliche Tokens</h3>
+  <p class="muted small">Für Programme ohne Anmeldung per OAuth oder für Skripte. Der Token wird im Programm als Header mitgeschickt.</p>
   {{if .TokenError}}<div class="errbox">{{.TokenError}}</div>{{end}}
   {{if .NewToken}}
     <div class="field"><label class="lbl" for="tok">Token „{{.NewTokenName}}“ ({{if .NewTokenWrite}}Lesen &amp; Schreiben{{else}}Nur lesen{{end}}), wird nur jetzt angezeigt</label><input id="tok" readonly value="{{.NewToken}}" data-selectall style="font-family:ui-monospace,monospace"></div>
@@ -34,7 +46,6 @@
     <label class="checkrow"><input type="checkbox" name="write"> Schreibzugriff: Einträge anlegen, ändern, löschen und Dateien anhängen</label>
     <div class="form-actions"><button class="btn">Token erzeugen</button></div>
   </form>
-  <p class="muted small">Adresse der Schnittstelle: <code>{{.MCPURL}}</code></p>
 </div>
 {{end}}
 {{end}}

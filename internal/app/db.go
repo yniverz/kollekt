@@ -121,6 +121,37 @@ CREATE TABLE IF NOT EXISTS api_tokens (
   last_used INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_api_tokens_user ON api_tokens(user_id);
+CREATE TABLE IF NOT EXISTS oauth_clients (
+  client_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL DEFAULT '',
+  redirect_uris TEXT NOT NULL DEFAULT '[]',
+  secret_hash TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS oauth_codes (
+  code_hash TEXT PRIMARY KEY,
+  client_id TEXT NOT NULL,
+  client_name TEXT NOT NULL DEFAULT '',
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  redirect_uri TEXT NOT NULL,
+  challenge TEXT NOT NULL,
+  can_write INTEGER NOT NULL DEFAULT 0,
+  expires_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS oauth_grants (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  client_id TEXT NOT NULL,
+  client_name TEXT NOT NULL DEFAULT '',
+  can_write INTEGER NOT NULL DEFAULT 0,
+  access_hash TEXT NOT NULL UNIQUE,
+  access_expires INTEGER NOT NULL,
+  refresh_hash TEXT NOT NULL UNIQUE,
+  refresh_expires INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  last_used INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_oauth_grants_user ON oauth_grants(user_id);
 `
 
 func openDB(dir string) (*sql.DB, error) {

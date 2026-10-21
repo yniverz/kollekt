@@ -41,6 +41,7 @@ type Config struct {
 	MapsOff       bool
 	WeatherOff    bool
 	MCPOff        bool
+	PublicURL     string
 	MaxStorageMB  int64
 	TileURL       string
 	TileAttrib    string
@@ -61,6 +62,7 @@ func ConfigFromEnv() Config {
 		MapsOff:       strings.EqualFold(env("KOLLEKT_MAPS", ""), "off"),
 		WeatherOff:    strings.EqualFold(env("KOLLEKT_WEATHER", ""), "off"),
 		MCPOff:        strings.EqualFold(env("KOLLEKT_MCP", ""), "off"),
+		PublicURL:     strings.TrimRight(os.Getenv("KOLLEKT_PUBLIC_URL"), "/"),
 		MaxStorageMB:  int64(parseNum(env("KOLLEKT_MAX_STORAGE_MB", "5120"))),
 		TileURL:       env("KOLLEKT_TILE_URL", "https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
 		TileAttrib:    env("KOLLEKT_TILE_ATTRIBUTION", "© OpenStreetMap-Mitwirkende"),
@@ -151,7 +153,8 @@ func Run(cfg Config) error {
 func (a *App) gcSessions() {
 	for {
 		_, _ = a.db.Exec("DELETE FROM sessions WHERE expires_at<?", time.Now().Unix())
-		loginThrottle.gc(10 * time.Minute)
+		loginThrottle.gc(time.Hour)
+		a.gcOAuth()
 		time.Sleep(time.Hour)
 	}
 }
