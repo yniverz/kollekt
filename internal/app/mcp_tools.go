@@ -101,6 +101,15 @@ func mcpTools() []*mcpTool {
 			{Name: "read_file", Title: "Anhang lesen", Fn: toolReadFile, Props: map[string]any{"file_id": pInt("ID der Datei (aus get_record oder search)."), "max_chars": pInt("Bei Textdateien höchstens so viele Zeichen (Standard 100000).")}, Required: []string{"file_id"},
 				Desc: "Inhalt eines Anhangs: Textdateien als Text, Bilder als Bild, PDFs als Dokument (bis 10 MB). Andere Formate (z. B. Word) nur mit Name und Typ."},
 
+			{Name: "web", Title: "Kollekt-Seite öffnen oder absenden", Fn: toolWeb,
+				Props: map[string]any{
+					"method":        pStr("GET (Seite lesen, Standard) oder POST (Formular absenden, braucht Schreibzugriff)."),
+					"path":          pStr("Pfad wie in der Kollekt-Oberfläche, z. B. / (Dashboard), /events/new, /e/3/settings, /e/3/team, /e/3/calc, /e/3/bar, /e/3/retro, /e/3/lageplan, /e/3/weather, /compare, /admin/users."),
+					"form":          pObj("Formularfelder: bei POST die Werte des Formulars (Feldnamen aus der Seite), bei GET Abfrageparameter. Mehrfachwerte als Liste. Mit defaults_from: false oder null nimmt einen Haken bzw. Wert heraus."),
+					"defaults_from": pStr("Nur bei POST, dringend empfohlen: Pfad der Seite, auf der das Formular steht (z. B. /e/3/settings). Dann werden alle aktuellen Werte des Formulars übernommen und nur die Felder in form ersetzt, sonst gehen nicht mitgeschickte Felder verloren (z. B. Haken bei Modulen)."),
+				}, Required: []string{"path"},
+				Desc: "Alles, was eine Person in der Kollekt-Oberfläche kann und wofür es kein eigenes Werkzeug gibt: Events anlegen, duplizieren, löschen und einstellen, Team und Rollen, Kalkulation mit Szenarien und Preisen, Bar-Einstellungen und Artikelstamm-Import, Lageplan, Nachbereitung, Anwohnerbrief, Checklisten zurücksetzen, Event-Vergleich, Wetter, Verwaltung (nur Admins). GET liefert die Seite als Text mit allen Formularen (Methode, Ziel, Feldnamen, aktuelle Werte, Auswahlmöglichkeiten, * = gewählt) und Links. Zum Ändern das Formular per POST an sein Ziel schicken, mit defaults_from = Pfad der Seite und in form nur den geänderten Feldern. Es gelten dieselben Rechte und Prüfungen wie im Browser."},
+
 			{Name: "create_record", Title: "Eintrag anlegen", Write: true, Fn: toolCreate,
 				Props:    map[string]any{"event_id": pInt("ID des Events. Bei Stammdaten weglassen."), "module": pModule, "fields": pObj("Feldwerte nach Schlüssel, siehe describe_module. Nicht genannte Felder bekommen ihren Standardwert.")},
 				Required: []string{"module", "fields"},

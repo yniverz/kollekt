@@ -574,6 +574,10 @@ type handler func(c *C)
 
 func (a *App) newC(w http.ResponseWriter, r *http.Request) *C {
 	c := &C{A: a, W: w, R: r}
+	if s, ok := r.Context().Value(mcpSessionKey{}).(*Session); ok { // page request of the MCP web tool
+		c.Sess, c.User = s, s.User
+		return c
+	}
 	if ck, err := r.Cookie(cookieName); err == nil {
 		if s := a.session(ck.Value); s != nil {
 			c.Sess, c.User = s, s.User
