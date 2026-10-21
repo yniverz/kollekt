@@ -4,7 +4,6 @@
 package app
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -328,42 +327,15 @@ func TestMCPWritesValidateLikeTheForm(t *testing.T) {
 	}
 }
 
-func TestMCPFilesAndReads(t *testing.T) {
+func TestMCPReads(t *testing.T) {
 	f := newFixture(t)
 	f.addUser("orga", roleByName(f.a, "Orga-Leitung"))
-	m := f.mcp("orga", true)
-	rid := f.recA["permits"].ID
-	up := m.ok("upload_file", map[string]any{"record_id": rid, "name": "Bescheid.txt", "text": "Sperrstunde 23 Uhr, maximal 85 dB(A)."})
-	fid := up["file_id"].(float64)
-	if txt, isErr := m.call("read_file", map[string]any{"file_id": fid}); isErr || !strings.Contains(txt, "Sperrstunde 23 Uhr") {
-		t.Errorf("read_file: %s", txt)
-	}
-	png := []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR")
-	up = m.ok("upload_file", map[string]any{"record_id": rid, "name": "plan.png", "content_base64": base64.StdEncoding.EncodeToString(png)})
-	res := m.rpc("tools/call", map[string]any{"name": "read_file", "arguments": map[string]any{"file_id": up["file_id"]}})
-	if !strings.Contains(fmt.Sprint(res), "image/png") {
-		t.Errorf("image not returned as image: %v", res)
-	}
-	rec := m.ok("get_record", map[string]any{"record_id": rid})
-	if len(rec["files"].([]any)) != 2 {
-		t.Errorf("files: %v", rec["files"])
-	}
-	if hits := fmt.Sprint(m.ok("search", map[string]any{"query": "bescheid"})["hits"]); !strings.Contains(hits, "Bescheid.txt") {
-		t.Errorf("file name search: %s", hits)
-	}
-	// someone without permits access cannot read the file
-	f.addUser("helfer", roleByName(f.a, "Helfer:in"))
-	if rolePerm(roleByName(f.a, "Helfer:in").Perms, "permits") < 1 {
-		h := f.mcp("helfer", false)
-		if txt, isErr := h.call("read_file", map[string]any{"file_id": fid}); !isErr {
-			t.Errorf("file readable without module access: %s", txt)
+	m := f.mcp("orga", false)
+	for _, tool := range []string{"read_file", "upload_file", "delete_file"} {
+		if res := m.rpc("tools/call", map[string]any{"name": tool, "arguments": map[string]any{}}); res["error"] == nil {
+			t.Errorf("%s must not exist: files belong in other services", tool)
 		}
 	}
-	m.ok("delete_file", map[string]any{"file_id": fid})
-	if f.a.file(int64(fid)) != nil {
-		t.Error("file not deleted")
-	}
-
 	ev := m.ok("get_event", map[string]any{"event_id": f.ev.ID})
 	if ev["name"] != "Event Eins" || ev["modules"] == nil || ev["kpis"] == nil {
 		t.Errorf("get_event: %v", ev)

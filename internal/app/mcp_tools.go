@@ -4,16 +4,9 @@
 package app
 
 import (
-	"bytes"
-	"encoding/base64"
 	"encoding/json"
-	"fmt"
-	"io"
 	"math"
-	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -87,19 +80,17 @@ func mcpTools() []*mcpTool {
 				}, Required: []string{"module"},
 				Desc: "Einträge eines Moduls mit allen Feldern, die du sehen darfst. Auswahlfelder und Verweise haben zusätzlich ihren Anzeigetext unter display. Lange Texte sind gekürzt; get_record liefert sie vollständig."},
 			{Name: "get_record", Title: "Eintrag lesen", Fn: toolGetRecord, Props: map[string]any{"record_id": pRecordID}, Required: []string{"record_id"},
-				Desc: "Ein Eintrag vollständig, mit Anhängen (Datei-IDs für read_file)."},
+				Desc: "Ein Eintrag vollständig, mit allen Feldern, die du sehen darfst."},
 			{Name: "search", Title: "Suchen", Fn: toolSearch,
 				Props:    map[string]any{"query": pStr("Suchbegriff (mindestens 2 Zeichen)."), "event_id": pInt("Optional. Nur in diesem Event suchen."), "limit": pInt("Höchstzahl der Treffer (Standard 30, maximal 200).")},
 				Required: []string{"query"},
-				Desc:     "Sucht in Events, Einträgen aller Module, Stammdaten und Dateinamen von Anhängen, soweit du sie sehen darfst."},
+				Desc:     "Sucht in Events, Einträgen aller Module und Stammdaten, soweit du sie sehen darfst."},
 			{Name: "get_timeplan", Title: "Zeitplan", Fn: toolTimeplan, Props: map[string]any{"event_id": pEventID, "only_mine": pBool("Nur, wofür du zuständig bist.")}, Required: []string{"event_id"},
 				Desc: "Alle offenen, datierten Fristen und Termine des Events (Aufgaben, Anträge, Zahlungen, Material abholen und zurückgeben), sortiert, mit Tagen bis heute und T-minus zum Event. Dazu offene Punkte ohne Datum."},
 			{Name: "get_finance", Title: "Finanzen", Fn: toolFinance, Props: map[string]any{"event_id": pEventID}, Required: []string{"event_id"},
 				Desc: "Budget-Auswertung: Einnahmen, Ausgaben, Ergebnis und Prognose, Kosten nach Kategorie und Bereich mit Limits, offene Zahlungen, automatisch eingerechnete Kosten aus anderen Modulen, Break-even."},
 			{Name: "get_changes", Title: "Letzte Änderungen", Fn: toolChanges, Props: map[string]any{"event_id": pEventID, "limit": pInt("Anzahl (Standard 30, maximal 200).")}, Required: []string{"event_id"},
 				Desc: "Wer hat zuletzt was im Event geändert (Änderungsprotokoll), soweit du die Module sehen darfst."},
-			{Name: "read_file", Title: "Anhang lesen", Fn: toolReadFile, Props: map[string]any{"file_id": pInt("ID der Datei (aus get_record oder search)."), "max_chars": pInt("Bei Textdateien höchstens so viele Zeichen (Standard 100000).")}, Required: []string{"file_id"},
-				Desc: "Inhalt eines Anhangs: Textdateien als Text, Bilder als Bild, PDFs als Dokument (bis 10 MB). Andere Formate (z. B. Word) nur mit Name und Typ."},
 
 			{Name: "create_record", Title: "Eintrag anlegen", Write: true, Fn: toolCreate,
 				Props:    map[string]any{"event_id": pInt("ID des Events. Bei Stammdaten weglassen."), "module": pModule, "fields": pObj("Feldwerte nach Schlüssel, siehe describe_module. Nicht genannte Felder bekommen ihren Standardwert.")},
@@ -113,13 +104,6 @@ func mcpTools() []*mcpTool {
 				Desc: "Löscht einen Eintrag samt Anhängen. Nicht rückgängig zu machen, vorher mit der Person abstimmen."},
 			{Name: "run_action", Title: "Aktion ausführen", Write: true, Fn: toolAction, Props: map[string]any{"record_id": pRecordID, "action": pStr("Schlüssel der Aktion (describe_module → actions), z. B. choose.")}, Required: []string{"record_id", "action"},
 				Desc: "Führt eine Aktion eines Moduls aus, z. B. in der Location-Suche „Als Location festlegen“ (choose)."},
-			{Name: "upload_file", Title: "Datei anhängen", Write: true, Fn: toolUpload,
-				Props: map[string]any{"record_id": pRecordID, "name": pStr("Dateiname mit Endung, z. B. Angebot.pdf."),
-					"content_base64": pStr("Dateiinhalt base64-kodiert (bis 10 MB)."), "text": pStr("Alternativ: Textinhalt (UTF-8), z. B. für .txt, .md, .csv, .eml.")},
-				Required: []string{"record_id", "name"},
-				Desc:     "Hängt eine Datei an einen Eintrag (Vertrag, Rechnung, Bescheid, E-Mail …). Höchstens 20 Anhänge pro Eintrag."},
-			{Name: "delete_file", Title: "Anhang entfernen", Write: true, Destructive: true, Fn: toolDeleteFile, Props: map[string]any{"file_id": pInt("ID der Datei.")}, Required: []string{"file_id"},
-				Desc: "Entfernt einen Anhang endgültig."},
 		}
 	}
 	return mcpToolList
@@ -249,26 +233,6 @@ func (x *mcpCtx) recC(id int64, needEdit bool) (*C, *Module, *Rec, error) {
 		return nil, nil, nil, errNoRec
 	}
 	return c, m, rec, nil
-}
-
-// fileC loads an attachment with the context of its event.
-func (x *mcpCtx) fileC(id int64, needEdit bool) (*C, *FileRec, *Module, *Rec, error) {
-	f := x.a.file(id)
-	if f == nil {
-		return nil, nil, nil, nil, toolErrf("Datei nicht gefunden.")
-	}
-	c := x.base()
-	if f.EventID != 0 {
-		var err error
-		if c, err = x.eventC(f.EventID); err != nil {
-			return nil, nil, nil, nil, toolErrf("Datei nicht gefunden.")
-		}
-	}
-	f, m, rec, _, msg := c.fileCheck(id, needEdit)
-	if f == nil {
-		return nil, nil, nil, nil, &toolError{msg}
-	}
-	return c, f, m, rec, nil
 }
 
 // accessibleEvents returns contexts for all events the user is member of (admins: all).
@@ -454,13 +418,6 @@ func (c *C) recJSON(m *Module, r *Rec, full bool) map[string]any {
 	out["updated"] = r.Updated.Format(time.RFC3339)
 	if full {
 		out["created"] = r.Created.Format(time.RFC3339)
-		if c.attachable(m) {
-			files := []map[string]any{}
-			for _, f := range c.A.filesFor(r.ID) {
-				files = append(files, map[string]any{"id": f.ID, "name": f.Name, "size": humanSize(f.Size), "uploaded": f.Created.Format("2006-01-02")})
-			}
-			out["files"] = files
-		}
 		if m.DoneField != "" {
 			out["done"] = contains(m.DoneVals, r.S(m.DoneField))
 		}
@@ -843,36 +800,11 @@ func toolSearch(x *mcpCtx, args map[string]any) (any, error) {
 		}
 		scan(c)
 	}
-	// attachments by file name
-	evIDs := map[int64]*C{0: x.base()}
-	if only > 0 {
-		delete(evIDs, 0)
-	}
-	for _, c := range evs {
-		evIDs[c.Event.ID] = c
-	}
-	for _, f := range scanFiles(x.a, "WHERE name LIKE ? ESCAPE '\\' ORDER BY id DESC LIMIT 500", "%"+likeEscape(q)+"%") {
-		c := evIDs[f.EventID]
-		if c == nil {
-			continue
-		}
-		if ff, m, rec, _, _ := c.fileCheck(f.ID, false); ff != nil {
-			h := map[string]any{"file_id": f.ID, "file": f.Name, "record_id": rec.ID, "module": m.Key, "title": c.A.recTitle(c, m, rec)}
-			if c.Event != nil {
-				h["event_id"], h["event"] = c.Event.ID, c.Event.Name
-			}
-			addHit(h)
-		}
-	}
 	res := map[string]any{"query": q, "hits": hits}
 	if full {
 		res["note"] = "Es gibt weitere Treffer. Suche genauer oder erhöhe limit."
 	}
 	return res, nil
-}
-
-func likeEscape(s string) string {
-	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(s)
 }
 
 func toolTimeplan(x *mcpCtx, args map[string]any) (any, error) {
@@ -994,61 +926,6 @@ func toolChanges(x *mcpCtx, args map[string]any) (any, error) {
 		out = append(out, e)
 	}
 	return map[string]any{"event": c.Event.Name, "changes": out}, nil
-}
-
-var textExt = map[string]bool{".txt": true, ".md": true, ".csv": true, ".tsv": true, ".json": true, ".xml": true, ".ics": true, ".eml": true, ".html": true, ".htm": true, ".log": true, ".yaml": true, ".yml": true, ".vcf": true}
-
-func toolReadFile(x *mcpCtx, args map[string]any) (any, error) {
-	id, err := needInt(args, "file_id")
-	if err != nil {
-		return nil, err
-	}
-	c, f, m, rec, err := x.fileC(id, false)
-	if err != nil {
-		return nil, err
-	}
-	meta := fmt.Sprintf("Datei %q (%s) an %s „%s“", f.Name, humanSize(f.Size), m.Singular, c.A.recTitle(c, m, rec))
-	path := filepath.Join(x.a.filesDir(), f.Stored)
-	ext := strings.ToLower(filepath.Ext(f.Name))
-	if f.Size > mcpMaxFile && !textExt[ext] {
-		return toolContent{{"type": "text", "text": meta + ": zu groß, um sie hier zu übertragen (über 10 MB)."}}, nil
-	}
-	fh, err := os.Open(path)
-	if err != nil {
-		return nil, toolErrf("Die Datei fehlt im Speicher.")
-	}
-	b, err := io.ReadAll(io.LimitReader(fh, mcpMaxFile))
-	fh.Close()
-	if err != nil {
-		return nil, toolErrf("Die Datei konnte nicht gelesen werden.")
-	}
-	mt := http.DetectContentType(b)
-	if i := strings.Index(mt, ";"); i > 0 {
-		mt = mt[:i]
-	}
-	switch {
-	case mt == "image/png" || mt == "image/jpeg" || mt == "image/gif" || mt == "image/webp":
-		return toolContent{{"type": "text", "text": meta}, {"type": "image", "data": base64.StdEncoding.EncodeToString(b), "mimeType": mt}}, nil
-	case textExt[ext] || strings.HasPrefix(mt, "text/"):
-		maxc, _ := argInt(args, "max_chars")
-		if maxc <= 0 {
-			maxc = 100000
-		}
-		s := strings.ToValidUTF8(string(b), "")
-		if r := []rune(s); int64(len(r)) > maxc {
-			s = string(r[:maxc]) + "\n… (gekürzt)"
-		} else if f.Size > mcpMaxFile {
-			s += "\n… (gekürzt, nur die ersten 10 MB)"
-		}
-		return toolContent{{"type": "text", "text": meta + ":\n\n" + s}}, nil
-	}
-	if mt != "application/pdf" {
-		return toolContent{{"type": "text", "text": meta + ", Typ " + mt + ". Dieses Format kann hier nicht gelesen werden (nur Text, Bilder und PDF)."}}, nil
-	}
-	return toolContent{
-		{"type": "text", "text": meta + ", Typ " + mt + "."},
-		{"type": "resource", "resource": map[string]any{"uri": "kollekt://files/" + itoa(f.ID) + "/" + url.PathEscape(f.Name), "mimeType": mt, "blob": base64.StdEncoding.EncodeToString(b)}},
-	}, nil
 }
 
 // ---------- write tools ----------
@@ -1328,63 +1205,4 @@ func toolAction(x *mcpCtx, args map[string]any) (any, error) {
 		return nil, toolErrf("Das Modul %s hat keine Aktionen.", m.Key)
 	}
 	return nil, toolErrf("Unbekannte Aktion %q. Möglich: %s.", key, strings.Join(keys, ", "))
-}
-
-func toolUpload(x *mcpCtx, args map[string]any) (any, error) {
-	id, err := needInt(args, "record_id")
-	if err != nil {
-		return nil, err
-	}
-	c, m, rec, err := x.recC(id, true)
-	if err != nil {
-		return nil, err
-	}
-	if !c.attachable(m) {
-		return nil, toolErrf("Für dieses Modul gibt es keine Anhänge.")
-	}
-	name := argStr(args, "name")
-	if name == "" {
-		return nil, toolErrf("Parameter name fehlt.")
-	}
-	var data []byte
-	if s, ok := args["content_base64"].(string); ok && s != "" {
-		if data, err = base64.StdEncoding.DecodeString(strings.TrimSpace(s)); err != nil {
-			return nil, toolErrf("content_base64 ist kein gültiges Base64.")
-		}
-	} else if s, ok := args["text"].(string); ok {
-		data = []byte(s)
-	} else {
-		return nil, toolErrf("content_base64 oder text angeben.")
-	}
-	if len(data) > mcpMaxFile {
-		return nil, toolErrf("Über MCP gehen höchstens 10 MB pro Datei. Größere Dateien bitte in Kollekt selbst hochladen.")
-	}
-	if len(c.A.filesFor(rec.ID)) >= maxFilesPerItem {
-		return nil, toolErrf("Dieser Eintrag hat schon %d Anhänge (Höchstzahl).", maxFilesPerItem)
-	}
-	var evID int64
-	if !m.Global {
-		evID = c.Event.ID
-	}
-	if err := c.storeFile(bytes.NewReader(data), int64(len(data)), name, evID, m.Key, rec.ID); err != nil {
-		return nil, &toolError{err.Error()}
-	}
-	c.audit(m, rec, "Anhang hinzugefügt (MCP)")
-	files := c.A.filesFor(rec.ID)
-	f := files[len(files)-1]
-	return map[string]any{"file_id": f.ID, "name": f.Name, "size": humanSize(f.Size), "record_id": rec.ID}, nil
-}
-
-func toolDeleteFile(x *mcpCtx, args map[string]any) (any, error) {
-	id, err := needInt(args, "file_id")
-	if err != nil {
-		return nil, err
-	}
-	c, f, m, rec, err := x.fileC(id, true)
-	if err != nil {
-		return nil, err
-	}
-	c.A.removeFile(f)
-	c.audit(m, rec, "Anhang entfernt (MCP)")
-	return map[string]any{"deleted_file": f.ID, "name": f.Name}, nil
 }

@@ -42,7 +42,7 @@ Kollekt hat einen eingebauten MCP-Server (Model Context Protocol) unter `/mcp`. 
 
 * **Zugang pro Person:** Unter *Mein Konto → KI-Assistenten* erzeugt jede Person eigene Tokens, wahlweise *Nur lesen* oder *Lesen & Schreiben*. Der Assistent hat genau die Rechte dieser Person: Rollen, „Nur eigene Bereiche“ und „Kosten & Gagen sehen“ gelten unverändert.
 * **Einrichtung in Claude Code:** `claude mcp add --transport http kollekt https://kollekt.example.org/mcp --header "Authorization: Bearer kx_…"` (der fertige Befehl erscheint beim Erzeugen des Tokens). Mit `--scope user` gilt er in allen Projekten.
-* **Werkzeuge:** Events und Übersicht mit Warnungen, Module und Felder, Einträge lesen und durchsuchen (auch Dateinamen), Zeitplan, Finanzen, Änderungsprotokoll, Anhänge lesen (Text, Bilder, PDF bis 10 MB). Mit Schreibzugriff zusätzlich: Einträge anlegen, ändern, löschen, Aktionen ausführen, Dateien anhängen und entfernen.
+* **Werkzeuge:** Events und Übersicht mit Warnungen, Module und Felder, Einträge lesen und durchsuchen, Zeitplan, Finanzen, Änderungsprotokoll. Mit Schreibzugriff zusätzlich: Einträge anlegen, ändern, löschen und Aktionen ausführen. Dateien und E-Mails gehören nicht in diese Schnittstelle, sondern werden im Assistenten über eigene Dienste angebunden.
 * **Nachvollziehbar:** Änderungen über MCP stehen im Änderungsprotokoll mit dem Zusatz „(MCP)“. Tokens werden nur gehasht gespeichert, lassen sich jederzeit widerrufen und funktionieren nicht mehr, sobald das Konto deaktiviert ist.
 * Über das Internet nur mit HTTPS betreiben. Wer die Schnittstelle nicht braucht, schaltet sie mit `KOLLEKT_MCP=off` ab.
 
