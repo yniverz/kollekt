@@ -32,44 +32,47 @@ func (c *C) modListURL(m *Module) string {
 
 // resolveModule validates the {mod} path parameter against scope and permissions.
 func (c *C) resolveModule(needEdit bool) *Module {
-	m := modByKey[c.R.PathValue("mod")]
+	m, code, msg := c.moduleAccess(c.R.PathValue("mod"), needEdit)
 	if m == nil {
-		c.Error(404, "Modul nicht gefunden.")
-		return nil
+		c.Error(code, msg)
+	}
+	return m
+}
+
+// moduleAccess checks a module key against scope and permissions. On failure it returns the
+// HTTP status and the message to show instead of the module.
+func (c *C) moduleAccess(key string, needEdit bool) (*Module, int, string) {
+	m := modByKey[key]
+	if m == nil {
+		return nil, 404, "Modul nicht gefunden."
 	}
 	if m.Global {
 		if c.Event != nil {
-			c.Error(404, "Modul nicht gefunden.")
-			return nil
+			return nil, 404, "Modul nicht gefunden."
 		}
 		if needEdit && !(c.User.IsAdmin || c.User.CanMaster) {
-			c.Error(403, "Keine Berechtigung, Stammdaten zu bearbeiten.")
-			return nil
+			return nil, 403, "Keine Berechtigung, Stammdaten zu bearbeiten."
 		}
-		return m
+		return m, 0, ""
 	}
 	if c.Event == nil || m.Key == "overview" || len(m.Fields) == 0 {
-		c.Error(404, "Modul nicht gefunden.")
-		return nil
+		return nil, 404, "Modul nicht gefunden."
 	}
 	parent := m.PermKey()
 	if !m.Core && !c.Event.Has(parent) && !c.Event.Has(m.Key) {
-		c.Error(404, "Dieses Modul ist für das Event nicht aktiviert.")
-		return nil
+		return nil, 404, "Dieses Modul ist für das Event nicht aktiviert."
 	}
 	need := 1
 	if needEdit {
 		need = 2
 	}
 	if needEdit && m.Key == "siteplans" && !c.canPlan() {
-		c.Error(403, "Pläne dürfen nur Personen ohne Bereichsbeschränkung ändern.")
-		return nil
+		return nil, 403, "Pläne dürfen nur Personen ohne Bereichsbeschränkung ändern."
 	}
 	if c.Level(parent) < need {
-		c.Error(403, "Dafür fehlt dir die Berechtigung.")
-		return nil
+		return nil, 403, "Dafür fehlt dir die Berechtigung."
 	}
-	return m
+	return m, 0, ""
 }
 
 func (c *C) canEditModule(m *Module) bool {
@@ -732,13 +735,21 @@ func (c *C) renderForm(m *Module, rec *Rec, vals map[string]string, errs map[str
 }
 
 func (c *C) loadRec(m *Module, id int64) *Rec {
+	rec := c.findRec(m, id)
+	if rec == nil {
+		c.Error(404, "Eintrag nicht gefunden.")
+	}
+	return rec
+}
+
+// findRec loads a record of module m in the current scope, or nil if it does not exist or is not visible.
+func (c *C) findRec(m *Module, id int64) *Rec {
 	rec := c.A.rec(id)
 	var evID int64
 	if !m.Global && c.Event != nil {
 		evID = c.Event.ID
 	}
 	if rec == nil || rec.Module != m.Key || rec.EventID != evID || !c.visible(m, rec) {
-		c.Error(404, "Eintrag nicht gefunden.")
 		return nil
 	}
 	return rec

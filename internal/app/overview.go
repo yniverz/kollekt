@@ -53,6 +53,12 @@ func (c *C) can(key string) bool {
 }
 
 func (c *C) handleOverview(w http.ResponseWriter, r *http.Request) {
+	v := c.overviewView()
+	c.Page("overview.html", map[string]any{"Title": c.Event.Name, "Nav": c.eventNav("overview"), "V": v, "EStatus": c.Event.Status, "Weather": !weatherOff && c.Event.Start != ""})
+}
+
+// overviewView collects key figures, warnings and the next deadlines the current user may see.
+func (c *C) overviewView() *OverviewView {
 	e := c.Event
 	v := &OverviewView{}
 	if d, ok := daysUntil(e.Start); ok {
@@ -355,7 +361,7 @@ func (c *C) handleOverview(w http.ResponseWriter, r *http.Request) {
 	v.DaysText = e.daysSummary()
 	v.Audit = c.visibleAudit(c.A.recentAudit(e.ID, 60), 10)
 	v.Team = c.A.members(e.ID)
-	c.Page("overview.html", map[string]any{"Title": e.Name, "Nav": c.eventNav("overview"), "V": v, "EStatus": e.Status, "Weather": !weatherOff && e.Start != ""})
+	return v
 }
 
 // visibleAudit keeps only changes in modules the person may see; area-restricted roles only see

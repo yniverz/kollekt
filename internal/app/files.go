@@ -222,10 +222,18 @@ func (c *C) handleUpload(w http.ResponseWriter, r *http.Request) {
 
 // fileAccess loads a file and checks the caller may see (or change) it.
 func (c *C) fileAccess(needEdit bool) (*FileRec, *Module, *Rec) {
-	f := c.A.file(pathInt(c.R, "fid"))
+	f, m, rec, code, msg := c.fileCheck(pathInt(c.R, "fid"), needEdit)
 	if f == nil {
-		c.Error(404, "Datei nicht gefunden.")
-		return nil, nil, nil
+		c.Error(code, msg)
+	}
+	return f, m, rec
+}
+
+// fileCheck is fileAccess without writing a response: on failure it returns the HTTP status and message.
+func (c *C) fileCheck(id int64, needEdit bool) (*FileRec, *Module, *Rec, int, string) {
+	f := c.A.file(id)
+	if f == nil {
+		return nil, nil, nil, 404, "Datei nicht gefunden."
 	}
 	m := modByKey[f.Module]
 	var evID int64
@@ -233,13 +241,11 @@ func (c *C) fileAccess(needEdit bool) (*FileRec, *Module, *Rec) {
 		evID = c.Event.ID
 	}
 	if m == nil || f.EventID != evID || m.Global != (c.Event == nil) {
-		c.Error(404, "Datei nicht gefunden.")
-		return nil, nil, nil
+		return nil, nil, nil, 404, "Datei nicht gefunden."
 	}
 	if m.Global {
 		if needEdit && !(c.User.IsAdmin || c.User.CanMaster) {
-			c.Error(403, "Keine Berechtigung.")
-			return nil, nil, nil
+			return nil, nil, nil, 403, "Keine Berechtigung."
 		}
 	} else {
 		need := 1
@@ -247,16 +253,14 @@ func (c *C) fileAccess(needEdit bool) (*FileRec, *Module, *Rec) {
 			need = 2
 		}
 		if !c.Event.Has(m.PermKey()) && !m.Core || c.Level(m.PermKey()) < need {
-			c.Error(403, "Keine Berechtigung.")
-			return nil, nil, nil
+			return nil, nil, nil, 403, "Keine Berechtigung."
 		}
 	}
 	rec := c.A.rec(f.RecordID)
 	if rec == nil || rec.Module != m.Key || !c.visible(m, rec) {
-		c.Error(404, "Datei nicht gefunden.")
-		return nil, nil, nil
+		return nil, nil, nil, 404, "Datei nicht gefunden."
 	}
-	return f, m, rec
+	return f, m, rec, 0, ""
 }
 
 func (c *C) handleDownload(w http.ResponseWriter, r *http.Request) {
@@ -299,18 +303,26 @@ func (c *C) saveUpload(fh *multipart.FileHeader, eventID int64, module string, r
 	if fh.Size > maxUpload || fh.Size == 0 {
 		return errors.New("Die Datei ist leer oder größer als 25 MB.")
 	}
-	if capMB := c.A.cfg.MaxStorageMB; capMB > 0 {
-		var used int64
-		_ = c.A.db.QueryRow("SELECT COALESCE(SUM(size),0) FROM files").Scan(&used)
-		if used+fh.Size > capMB<<20 {
-			return errors.New("Der Speicher für Anhänge ist voll (Limit: KOLLEKT_MAX_STORAGE_MB).")
-		}
-	}
 	src, err := fh.Open()
 	if err != nil {
 		return errors.New("Die Datei konnte nicht gelesen werden.")
 	}
 	defer src.Close()
+	return c.storeFile(src, fh.Size, fh.Filename, eventID, module, recordID)
+}
+
+// storeFile writes size bytes from src as a new attachment of the record, respecting the storage limit.
+func (c *C) storeFile(src io.Reader, size int64, name string, eventID int64, module string, recordID int64) error {
+	if size > maxUpload || size == 0 {
+		return errors.New("Die Datei ist leer oder größer als 25 MB.")
+	}
+	if capMB := c.A.cfg.MaxStorageMB; capMB > 0 {
+		var used int64
+		_ = c.A.db.QueryRow("SELECT COALESCE(SUM(size),0) FROM files").Scan(&used)
+		if used+size > capMB<<20 {
+			return errors.New("Der Speicher für Anhänge ist voll (Limit: KOLLEKT_MAX_STORAGE_MB).")
+		}
+	}
 	if err := os.MkdirAll(c.A.filesDir(), 0o700); err != nil {
 		return errors.New("Dateispeicher nicht verfügbar.")
 	}
@@ -327,7 +339,7 @@ func (c *C) saveUpload(fh *multipart.FileHeader, eventID int64, module string, r
 		return errors.New("Die Datei ist zu groß oder konnte nicht gespeichert werden.")
 	}
 	if _, err := c.A.db.Exec("INSERT INTO files(event_id,module,record_id,name,size,stored,created_by,created_at) VALUES(?,?,?,?,?,?,?,?)",
-		eventID, module, recordID, cleanFilename(fh.Filename), n, stored, c.User.ID, time.Now().Unix()); err != nil {
+		eventID, module, recordID, cleanFilename(name), n, stored, c.User.ID, time.Now().Unix()); err != nil {
 		_ = os.Remove(path)
 		return errors.New("Die Datei konnte nicht registriert werden.")
 	}

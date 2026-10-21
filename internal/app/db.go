@@ -111,6 +111,16 @@ CREATE TABLE IF NOT EXISTS audit (
   title TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_audit_event ON audit(event_id, id);
+CREATE TABLE IF NOT EXISTS api_tokens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  can_write INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  last_used INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_api_tokens_user ON api_tokens(user_id);
 `
 
 func openDB(dir string) (*sql.DB, error) {

@@ -36,6 +36,16 @@ Kollekt ist **kein Ticketsystem und keine Kasse**. Es dient der Planung und dem 
 
 Die Übersicht jedes Events zeigt Kennzahlen, Warnungen (überfällige Aufgaben, verstrichene Antragsfristen, Verlust, Kapazität, offene Schichten, Artikel unter Einkaufspreis, Überschneidungen) und die nächsten Fristen.
 
+## KI-Assistenten (MCP)
+
+Kollekt hat einen eingebauten MCP-Server (Model Context Protocol) unter `/mcp`. Damit können KI-Assistenten wie Claude Code Events, Fristen, Budget und Anhänge lesen und auf Wunsch Einträge anlegen oder ändern.
+
+* **Zugang pro Person:** Unter *Mein Konto → KI-Assistenten* erzeugt jede Person eigene Tokens, wahlweise *Nur lesen* oder *Lesen & Schreiben*. Der Assistent hat genau die Rechte dieser Person: Rollen, „Nur eigene Bereiche“ und „Kosten & Gagen sehen“ gelten unverändert.
+* **Einrichtung in Claude Code:** `claude mcp add --transport http kollekt https://kollekt.example.org/mcp --header "Authorization: Bearer kx_…"` (der fertige Befehl erscheint beim Erzeugen des Tokens). Mit `--scope user` gilt er in allen Projekten.
+* **Werkzeuge:** Events und Übersicht mit Warnungen, Module und Felder, Einträge lesen und durchsuchen (auch Dateinamen), Zeitplan, Finanzen, Änderungsprotokoll, Anhänge lesen (Text, Bilder, PDF bis 10 MB). Mit Schreibzugriff zusätzlich: Einträge anlegen, ändern, löschen, Aktionen ausführen, Dateien anhängen und entfernen.
+* **Nachvollziehbar:** Änderungen über MCP stehen im Änderungsprotokoll mit dem Zusatz „(MCP)“. Tokens werden nur gehasht gespeichert, lassen sich jederzeit widerrufen und funktionieren nicht mehr, sobald das Konto deaktiviert ist.
+* Über das Internet nur mit HTTPS betreiben. Wer die Schnittstelle nicht braucht, schaltet sie mit `KOLLEKT_MCP=off` ab.
+
 ## Rechte
 
 * **Admin** sieht und ändert alles und verwaltet Benutzer, Rollen und Vorlagen.
@@ -74,6 +84,7 @@ Danach `http://localhost:8080` öffnen. Beim ersten Aufruf erscheint die Einrich
 | `KOLLEKT_SATELLITE_ATTRIBUTION` | Esri-Quellenangabe | Quellenangabe der Satellitenbilder |
 | `KOLLEKT_LABELS_URL` | Esri Beschriftung | Beschriftungs-Ebene für „Satellit mit Beschriftung“. Bei eigenem Satellitenserver leer, sofern nicht gesetzt |
 | `KOLLEKT_GEOCODER_URL` | Nominatim | Dienst für die Adresssuche |
+| `KOLLEKT_MCP` | an | `off` schaltet die MCP-Schnittstelle für KI-Assistenten und die API-Tokens ab |
 | `KOLLEKT_DEMO_DATA` | leer | `1` legt in einer leeren Installation ein Demo-Event mit frei erfundenen Daten an |
 
 **Backup:** Das Volume `/data` enthält alles (`kollekt.db` und der Ordner `files/` mit den Anhängen). Im laufenden Betrieb am besten mit `sqlite3 kollekt.db ".backup backup.db"` sichern oder den Container kurz stoppen.

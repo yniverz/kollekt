@@ -40,6 +40,7 @@ type Config struct {
 	TrustProxy    bool
 	MapsOff       bool
 	WeatherOff    bool
+	MCPOff        bool
 	MaxStorageMB  int64
 	TileURL       string
 	TileAttrib    string
@@ -59,6 +60,7 @@ func ConfigFromEnv() Config {
 		TrustProxy:    env("KOLLEKT_TRUST_PROXY", "") == "1",
 		MapsOff:       strings.EqualFold(env("KOLLEKT_MAPS", ""), "off"),
 		WeatherOff:    strings.EqualFold(env("KOLLEKT_WEATHER", ""), "off"),
+		MCPOff:        strings.EqualFold(env("KOLLEKT_MCP", ""), "off"),
 		MaxStorageMB:  int64(parseNum(env("KOLLEKT_MAX_STORAGE_MB", "5120"))),
 		TileURL:       env("KOLLEKT_TILE_URL", "https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
 		TileAttrib:    env("KOLLEKT_TILE_ATTRIBUTION", "© OpenStreetMap-Mitwirkende"),
@@ -98,6 +100,7 @@ func Run(cfg Config) error {
 	}
 	trustProxy = cfg.TrustProxy
 	weatherOff = cfg.WeatherOff
+	mcpOff = cfg.MCPOff
 	mapCfg = MapConfig{Enabled: !cfg.MapsOff, TileURL: cfg.TileURL, Attribution: cfg.TileAttrib, GeocoderURL: cfg.GeocoderURL, SatelliteURL: cfg.SatelliteURL, SatelliteAttr: cfg.SatelliteAttr, LabelsURL: cfg.LabelsURL}
 	db, err := openDB(cfg.DataDir)
 	if err != nil {

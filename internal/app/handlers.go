@@ -36,8 +36,13 @@ func (a *App) routes() {
 	}))
 
 	mux.HandleFunc("GET /{$}", a.auth(func(c *C) { c.handleDashboard(c.W, c.R) }))
-	mux.HandleFunc("GET /account", a.auth(func(c *C) { c.Page("account.html", map[string]any{"Title": "Mein Konto"}) }))
+	mux.HandleFunc("GET /account", a.auth(a.accountPage))
 	mux.HandleFunc("POST /account", a.auth(a.accountPost))
+	mux.HandleFunc("POST /account/tokens", a.auth(a.tokenCreate))
+	mux.HandleFunc("POST /account/tokens/{tid}/delete", a.auth(a.tokenDelete))
+
+	// MCP (Model Context Protocol) for AI assistants, authenticated by personal API tokens
+	mux.HandleFunc("/mcp", a.mcpHandler)
 
 	// events
 	mux.HandleFunc("GET /events/new", a.auth(a.eventNew))
@@ -239,7 +244,7 @@ func (a *App) accountPost(c *C) {
 	r := c.R
 	if _, err := a.checkLogin(c.User.Username, r.FormValue("old")); err != nil {
 		c.W.WriteHeader(422)
-		c.Page("account.html", map[string]any{"Title": "Mein Konto", "Error": "Das aktuelle Passwort stimmt nicht."})
+		c.renderAccount(map[string]any{"Error": "Das aktuelle Passwort stimmt nicht."})
 		return
 	}
 	pw := r.FormValue("new")
@@ -248,7 +253,7 @@ func (a *App) accountPost(c *C) {
 			msg = "Die beiden Passwörter stimmen nicht überein."
 		}
 		c.W.WriteHeader(422)
-		c.Page("account.html", map[string]any{"Title": "Mein Konto", "Error": msg})
+		c.renderAccount(map[string]any{"Error": msg})
 		return
 	}
 	h, _ := hashPW(pw)

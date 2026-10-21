@@ -11,4 +11,30 @@
     <button class="btn primary">Speichern</button>
   </form>
 </div>
+{{if .MCPOn}}
+<div class="panel" style="max-width:720px">
+  <h2>KI-Assistenten (MCP)</h2>
+  <p class="muted small">Mit einem persönlichen Token können KI-Assistenten wie Claude Code über das Model Context Protocol auf Kollekt zugreifen. Sie sehen und ändern genau das, was du hier sehen und ändern darfst. Ein Token „Nur lesen“ reicht für Fragen und Auswertungen. Gib Schreibzugriff nur, wenn der Assistent auch Einträge anlegen oder ändern soll.</p>
+  {{if .TokenError}}<div class="errbox">{{.TokenError}}</div>{{end}}
+  {{if .NewToken}}
+    <div class="field"><label class="lbl" for="tok">Token „{{.NewTokenName}}“ ({{if .NewTokenWrite}}Lesen &amp; Schreiben{{else}}Nur lesen{{end}}), wird nur jetzt angezeigt</label><input id="tok" readonly value="{{.NewToken}}" data-selectall style="font-family:ui-monospace,monospace"></div>
+    <div class="field"><label class="lbl" for="cmd">Einrichtung in Claude Code</label><textarea id="cmd" readonly data-selectall rows="3" style="font-family:ui-monospace,monospace">claude mcp add --transport http kollekt {{.MCPURL}} --header "Authorization: Bearer {{.NewToken}}"</textarea></div>
+    <p class="muted small">Den Token wie ein Passwort behandeln. Mit <code>--scope user</code> gilt der Zugang in allen Projekten. Über das Internet nur mit <code>https://</code> nutzen.</p>
+  {{end}}
+  {{if .Tokens}}
+  <div class="tblwrap"><table class="tbl"><thead><tr><th>Name</th><th>Zugriff</th><th>Erstellt</th><th>Zuletzt genutzt</th><th></th></tr></thead><tbody>
+  {{range .Tokens}}<tr><td class="title">{{.Name}}</td><td>{{if .CanWrite}}<span class="badge b-orange">Lesen &amp; Schreiben</span>{{else}}<span class="badge b-gray">Nur lesen</span>{{end}}</td>
+  <td>{{.Created.Format "02.01.2006"}}</td><td>{{if .LastUsed.IsZero}}<span class="muted">nie</span>{{else}}{{.LastUsed.Format "02.01.2006 15:04"}}{{end}}</td>
+  <td style="text-align:right"><form method="post" action="/account/tokens/{{.ID}}/delete" style="display:inline"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="btn ghost sm" data-confirm="Token widerrufen? Programme, die ihn nutzen, verlieren den Zugriff.">Widerrufen</button></form></td></tr>{{end}}
+  </tbody></table></div>
+  {{end}}
+  <form method="post" action="/account/tokens">
+    <input type="hidden" name="_csrf" value="{{.CSRF}}">
+    <div class="field"><label class="lbl" for="tn">Name des Tokens</label><input id="tn" name="name" maxlength="60" placeholder="z. B. Claude Code Laptop"></div>
+    <label class="checkrow"><input type="checkbox" name="write"> Schreibzugriff: Einträge anlegen, ändern, löschen und Dateien anhängen</label>
+    <div class="form-actions"><button class="btn">Token erzeugen</button></div>
+  </form>
+  <p class="muted small">Adresse der Schnittstelle: <code>{{.MCPURL}}</code></p>
+</div>
+{{end}}
 {{end}}
